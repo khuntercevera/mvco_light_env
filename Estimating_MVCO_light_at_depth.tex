@@ -1,0 +1,33 @@
+\documentclass[11pt]{article}
+\usepackage{geometry}                % See geometry.pdf to learn the layout options. There are lots.
+\geometry{letterpaper}                   % ... or a4paper or a5paper or ... 
+%\geometry{landscape}                % Activate for for rotated page geometry
+%\usepackage[parfill]{parskip}    % Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{epstopdf}
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
+
+\title{Estimating an in situ light environment at MVCO}
+
+
+\begin{document}
+\maketitle
+\section{Overview}
+\section{Radiometer data processing}
+
+The files that are generated from the HyperPro radiometer have a `~.raw' extension. The `~.raw` files contain all the unconverted measurements from all the sensors incorporated into the HyperPro. For this exercise though, we're really only concerned with the measurements from the MPR (depth sensor), 284 (downwelling irradiance), and 285 (solar reference). Pitch, angle, roll, upwelling irradiance, and more are also measured by the HyperPro, but for just a first glance at the ligth field at depth, these can be excluded. To convert the raw files into readable text file , we need the calibration data for each sensor and the program SatCon, which applies the conversion (from the calibration files). This can all be done in with the matlab script: \textbf{processPROII\_KRHC\_.m}. The program SatCon (as long as available in the path) is called directly within Matlab (convenient!). This script does the conversion to a text file output, saves these, and then re-imports them to make matlab files with useful raw and processed variables.
+
+With each of the light sensors there are dark measurements - these are necessary because temperature of the sensor can affect the measurement and these are corrected with corresponding dark measurements. In the \textbf{processPROII\_KRHC\_.m} script, the nearest dark measurement in time is simply subtracted from the light measurement. PAR is calculated as the integral over wavelengths 400 - 700 nm. The light measurements are then time-synced to the MPR sensor, which has more frequent measurements. Some plots for sanity-checks are also produced if the plotflag is changed to one.
+
+
+\subsection{raw files to text readables}
+\subsection{estimating the attenuation coefficient, k}
+\section{Estimating a Mixed Layer Depth}
+\subsection{CTD casts}
+\subsection{Density Array data}
+%\subsection{}
+
+
+
+\end{document}  
