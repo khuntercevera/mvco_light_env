@@ -8,8 +8,8 @@
 %pulls out k-values for easier plotting
 
 % some plots of k
-
 %imports chl data and plots this against k-values...
+
 %% A time series plot of K_d values!
 
 %sourcepath=fullfile('\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\processed_radiometer_files\'); % path to folders with raw data...
@@ -372,11 +372,4 @@ lambdas=cellfun(@(x) str2num(x),temp);
 
 %extract just light measurments:
 wv=cell2mat(edl(:,5:end-10));
-
-%Calculate PAR:
-PAR = trapz(lambdas,wv,2); %in uW/cm^2
-PAR = (1e4/1e6)*PAR;  %in W/m^2
-
-
-%compare attentuation coefficients to chl data...
 

@@ -15,15 +15,64 @@
 \maketitle
 \section{Overview}
 \section{Radiometer data processing}
-
+\subsection{raw files to text readables}
 The files that are generated from the HyperPro radiometer have a `~.raw' extension. The `~.raw` files contain all the unconverted measurements from all the sensors incorporated into the HyperPro. For this exercise though, we're really only concerned with the measurements from the MPR (depth sensor), 284 (downwelling irradiance), and 285 (solar reference). Pitch, angle, roll, upwelling irradiance, and more are also measured by the HyperPro, but for just a first glance at the ligth field at depth, these can be excluded. To convert the raw files into readable text file , we need the calibration data for each sensor and the program SatCon, which applies the conversion (from the calibration files). This can all be done in with the matlab script: \textbf{processPROII\_KRHC\_.m}. The program SatCon (as long as available in the path) is called directly within Matlab (convenient!). This script does the conversion to a text file output, saves these, and then re-imports them to make matlab files with useful raw and processed variables.
 
 With each of the light sensors there are dark measurements - these are necessary because temperature of the sensor can affect the measurement and these are corrected with corresponding dark measurements. In the \textbf{processPROII\_KRHC\_.m} script, the nearest dark measurement in time is simply subtracted from the light measurement. PAR is calculated as the integral over wavelengths 400 - 700 nm. The light measurements are then time-synced to the MPR sensor, which has more frequent measurements. Some plots for sanity-checks are also produced if the plotflag is changed to one.
 
+If multiple casts were done that day (which is typically the cast), individual casts are saved, but also a combined variable that stores the information from each cast in a structure. The following variables for each cast are:
 
-\subsection{raw files to text readables}
+\begin{itemize}
+\item file name \\
+\item  cruiseID (not always entered)
+\item operator  (not always entered)
+\item latitude (not always entered) 
+\item   longitude (not always entered)
+\item    timestamp 
+\item    pressure\_tare 
+\item    emptyflag: data file was empty 
+\item    adj\_esl: dark adjusted solar standard
+\item    adj\_edl: dark adjusted downwelling
+\item    esl\_PAR: solar standard PAR
+\item    edl\_PAR: downwelling PAR
+\item    edl\_ind: index that matches MPR data
+\item    esl\_ind: index that matches MPR data
+\item    mprtime: matlab date
+\item    solarflag: anything fishy for how light looks?
+\item    depth
+\end{itemize}
+
 \subsection{estimating the attenuation coefficient, k}
+
+From the saved matlab variables, these are imported with the script \textbf{more\_hyperpro\_processing.m}, and used to estimate an attenuation coefficient k. K is calculated as the slope of a regression line that is fitted through log transformed PAR data against depth. Smoothed depth data from the cast is used, and measurements near the top and bottom are not used. The fit, values and any flags are stored in a structure, K\_PAR, for each cast and save by date.
+\\
+
+\noindent An aside note: it turns out that the ProSoft software made to do these types of calculations actually does not calculate an attenuation coefficient for PAR (it does so for each individual wavelength, and calculates PAR, but will NOT calculate K-PAR). 
+
+\subsection{finding the lat/lon}
+
+For some of the casts, this was not entered or recorded. Unfortunately, this means a very manual process of using other lab data for that date, cross-referencing with MVCO event number, and then making a decision call about the station. I believe one set of casts, 23Sep2008, still does not have lat/lon accounted for. Otherwise, this data is stored in a location structure, labelled by date.
+
+\subsection{k-exploration}
+
+The script \textbf{k\_relationships} gives some nice overview plots of where we have data for, which data we're using near the tower, and what k looks like over time:
+
+ 
+ \begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{k-values.pdf}
+\caption{Stuff!}
+\end{figure}
+
+This script also imports chlorophyll data, matches k-values by date and then tries to make some relationships:
+
+\subsection{chl-to-fluorescence match}
+
+
 \section{Estimating a Mixed Layer Depth}
+
+So, now that we may have a rough idea of the light level at certain times of year, we can add another layer of information to guide our estimate. And that is trying to guage how cells might be mixing within the water column. Typically, MVCO is well mixed, being so shallow, but stratification does happen, particularly in the summer months, and we'd like to be able to say if cells are seeing all of the water column (and light levels) or just part of it (and higher or lower light levels). While this is 
+
 \subsection{CTD casts}
 \subsection{Density Array data}
 %\subsection{}
