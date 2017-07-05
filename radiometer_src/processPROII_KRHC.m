@@ -13,7 +13,9 @@ close all;
 close all; %for any open files
 plot_flag=1;
 
-raw_data_log={};
+%If have not made this yet:
+%raw_data_log={};
+load temp_datalog.mat
 
 mastersourcepath=fullfile('\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\raw_data\'); % path to folders with raw data...
 
@@ -119,8 +121,10 @@ for foldernum = 1:length(datafolders)
     
     for filenum = 1:numfiles
         
-        infile = fullfile(tempdatasource, sourcefiles(filenum).name);
-        outfile = fullfile(matoutdir, [sourcefiles(filenum).name(1:end-3) 'mat']);
+        filename=sourcefiles(filenum).name;
+        
+        infile = fullfile(tempdatasource, filename);
+        outfile = fullfile(matoutdir, [filename(1:end-3) 'mat']);
         
         fprintf('Processing %s into text into matlab files\n', sourcefiles(filenum).name);
         empty_flag=0;
@@ -250,33 +254,65 @@ for foldernum = 1:length(datafolders)
             
             clear dataArray column_headers txtfile
             
+            %GATHER SATFILE HEADER INFORMATION: PRESSURE TARE, LAT/LON, OPERATOR
+            
             if ftype==1 %just do this once :)
+                
+                delimiter = ' ';
+                endRow = 19;
+                formatSpec = '%q%q%q%q%q%q%q%[^\n\r]'; %'%q%q%q%q%q%f%q%[^\n\r]';
+
+                fileID = fopen(infile,'r');
+                dataArray = textscan(fileID, formatSpec, endRow, 'Delimiter', delimiter, 'MultipleDelimsAsOne', true, 'EmptyValue' ,NaN,'ReturnOnError', false);
+                fclose(fileID);
+
+                dataArray(6) = cellfun(@(x) num2cell(x), dataArray(6), 'UniformOutput', false);
+                satfile_hdr = [dataArray{1:end-1}];
+                % Clear temporary variables
+                clearvars delimiter endRow formatSpec fileID dataArray ans
+                
+                tempstruc(filenum).file = filename;
+                tempstruc(filenum).cruiseID = satfile_hdr{1,2};
+                tempstruc(filenum).operator = [satfile_hdr{2,2} ' ' satfile_hdr{2,3}];
+                tempstruc(filenum).lat = [satfile_hdr{3,2} ' ' satfile_hdr{3,3}];
+                tempstruc(filenum).lon = [satfile_hdr{4,2} ' ' satfile_hdr{4,3}];
+                tempstruc(filenum).timestamp=datenum([char(satfile_hdr{9,3}) '-' char(satfile_hdr{9,4}) '-' char(satfile_hdr{9,6}) ' ' char(satfile_hdr{9,5})]);
+                
+                if tempstruc(filenum).timestamp > datenum('1-0-2016')
+                    disp('Ummm- somethings not right with the timestamp here...')
+                    keyboard
+                end
+                
+                tempstruc(filenum).pressure_tare=str2num(satfile_hdr{11,2});
+                if tempstruc(filenum).pressure_tare < 8
+                    fprintf('Is this the right pressure tare? %2.3f',tempstruc(filenum).pressure_tare)
+                    keyboard
+                end
+                
+                pressure_tare=tempstruc(filenum).pressure_tare; %for use later on in teh script
+                
+            end
                 %PRESSURE TARE - this is recorder in a header region of each .raw file:
                 %--------------------------------------------------------------------------------
-                delimiter = ' ';
-                startRow = 11;
-                endRow = 11;
-                % Format string for each line of text:
-                %   column1: text (%s)
-                %	column2: text (%s)
-                formatSpec = '%s%s%*s%*s%*s%*s%*s%*s%*s%*s%[^\n\r]';
-                fileID = fopen(infile,'r');
-                textscan(fileID, '%[^\n\r]', startRow-1, 'ReturnOnError', false);
-                dataArray = textscan(fileID, formatSpec, endRow-startRow+1, 'Delimiter', delimiter, 'MultipleDelimsAsOne', true, 'ReturnOnError', false);
-                fclose(fileID);
-                
-                pressure_tare = [dataArray{1:end-1}];
-                pressure_tare=str2num(pressure_tare{2}); %+ distance back up to downwelling sensor??
-                
-                clearvars filename delimiter startRow endRow formatSpec fileID dataArray
-            end
-            
-            %%
-            %GET LAT AND LONGITUDE AS WELL!!!!
-            
-            
-            %If can't find a pressure tare?
-            
+%                 delimiter = ' ';
+%                 startRow = 11;
+%                 endRow = 11;
+%                 % Format string for each line of text:
+%                 %   column1: text (%s)
+%                 %	column2: text (%s)
+%                 formatSpec = '%s%s%*s%*s%*s%*s%*s%*s%*s%*s%[^\n\r]';
+%                 fileID = fopen(infile,'r');
+%                 textscan(fileID, '%[^\n\r]', startRow-1, 'ReturnOnError', false);
+%                 dataArray = textscan(fileID, formatSpec, endRow-startRow+1, 'Delimiter', delimiter, 'MultipleDelimsAsOne', true, 'ReturnOnError', false);
+%                 fclose(fileID);
+%                 
+%                 pressure_tare = [dataArray{1:end-1}];
+%                 pressure_tare=str2num(pressure_tare{2}); %+ distance back up to downwelling sensor??
+%                 
+%                 clearvars filename delimiter startRow endRow formatSpec fileID dataArray
+%             end
+                      
+                        
         end; % of ftype
         
         %
@@ -405,23 +441,9 @@ for foldernum = 1:length(datafolders)
             mpr_mattime=mpr_data{end};
             mpr_jultime=mpr_data{end-1};
             
-            % Some useful quantities from the MPR:
-            %-----------------------------------------------------------------------
-            
-            jj= strcmp(mpr_hdr,'Pres')==1;
-            depth=mpr_data{:,jj}-pressure_tare;
-            
-            %to make some of the calculations easier, trim off the first
-            %few meters and above the bottom:
-            tdepth=depth; %t for trim
-            tdepth(tdepth<1)=NaN;
-            tdepth(tdepth > max(tdepth)-1) = NaN;
-            %this avoids potentially dealing with wave focusing or profile
-            %bobbing up and down on the bottom!
-            
+            depth=mpr_data{:,7}-pressure_tare;
             fprintf('Pressure tare: %2.2f         min deth: %2.2f max deth: %2.2f \n',pressure_tare,min(depth),max(depth));
-                     
-            
+                              
             if plot_flag==1
                 
                 clf
@@ -434,7 +456,7 @@ for foldernum = 1:length(datafolders)
                 plot(esd_data{end-1},min(esd_wv_data,[],2),'k-','linewidth',2)
                 plot(esd_data{end-1},max(esd_wv_data,[],2),'k-','linewidth',2)
                 datetick('x','keeplimits')
-                xlim([min(mpr_mattime) max(mpr_mattime)])
+                xlim([min(mpr_jultime) max(mpr_jultime)])
                 
                 ylabel('Radiation for each \lambda (W m^{-2})')
                 title('Dark Solar Standard')
@@ -446,7 +468,7 @@ for foldernum = 1:length(datafolders)
                 plot(edd_data{end-1},min(edd_wv_data,[],2),'k-','linewidth',2)
                 plot(edd_data{end-1},max(edd_wv_data,[],2),'k-','linewidth',2)
                 datetick('x','keeplimits')
-                xlim([min(mpr_mattime) max(mpr_mattime)])
+                xlim([min(mpr_jultime) max(mpr_jultime)])
                 
                 ylabel('Radiation for each \lambda (W m^{-2})')
                 title('Dark Downwelling')
@@ -500,19 +522,45 @@ for foldernum = 1:length(datafolders)
             
             %keyboard
             
-            data_comment = input('Good data? Enter a comment for future use :)\n');
+            %if have not already made this log:
+%             data_comment = input('Good data? Enter a comment for future use :)\n');           
+%             raw_data_log=[raw_data_log; [{datafolders{foldernum}} {sourcefiles(filenum).name} {'data present'} {data_comment}] ];
+%             
+            ii=find(strcmp(filename, raw_data_log(:,2))==1);
             
-            raw_data_log=[raw_data_log; [{datafolders{foldernum}} {sourcefiles(filenum).name} {'data present'} {data_comment}] ];
+            if strcmp(raw_data_log{ii,4},'not a cast')   
+                tempstruc(filenum).emptyflag = 2;
+            else %good casts
+                tempstruc(filenum).emptyflag = 0;
+            end
             
             %SAVE THAT DATA!
             %--------------------------------------------------------------------------------------------------
-            eval(['save ' outfile ' *mpr* *edl* *esl* *edd* *esd* solarstd_flag *PAR* pressure_tare depth *time*'])
+            %eval(['save ' outfile ' *mpr* *edl* *esl* *edd* *esd* solarstd_flag *PAR* pressure_tare depth *time*'])
+            eval(['save ' outfile ' mpr_data edl_data esl_data edd_data satfile_hdr'])    %save the rawer products as matrices
+            
+            %but the products in the structure?
+            tempstruc(filenum).adj_esl=adj_esl;
+            tempstruc(filenum).adj_edl=adj_edl;
+            tempstruc(filenum).esl_PAR=esl_PAR;
+            tempstruc(filenum).edl_PAR=edl_PAR;
+            tempstruc(filenum).edl_ind=mpr2edl;
+            tempstruc(filenum).esl_ind=mpr2esl;
+            tempstruc(filenum).mprtime=mpr_mattime;
+            tempstruc(filenum).solarflag=solarstd_flag;
+            tempstruc(filenum).depth=depth;
+
         else
-            raw_data_log=[raw_data_log; [{datafolders{foldernum}} {sourcefiles(filenum).name} {'no data for at least one of the files'} {''}] ];
+            tempstruc(filenum).emptyflag = 1;
+            %raw_data_log=[raw_data_log; [{datafolders{foldernum}} {sourcefiles(filenum).name} {'no data for at least one of the files'} {''}] ];
+        
         end %empty_flag
         
-        clearvars -except numfiles sourcefiles mastersourcepath masteroutpath calfiledir datafolders filenum
+        clearvars -except numfiles sourcefiles matoutdir txtoutdir numfiles mastersourcepath masteroutpath calfiledir datafolders filenum tempstruc foldernum tempdatasource plot_flag raw_data_log
         %
     end;   % of filenum   
-    
+    %
+    eval(['data_' datafolders{foldernum} '=tempstruc;'])
+    clear tempstruc
+    eval(['save ' matoutdir '\data_' datafolders{foldernum} '.mat ' 'data_' datafolders{foldernum}])
 end;  %of foldernum
