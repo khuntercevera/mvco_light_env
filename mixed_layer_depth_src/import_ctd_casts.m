@@ -1,116 +1,83 @@
-%script to import all the Tioga processed data from the SurveyCruises
-%folder:
+%script to import all the Tioga processed CTD data (.cnv files) from the
+%processed_CTD_data folder:
 
-%cast_type='Dbin'; %Ubin %files can be processed seqparately as just
-%downward or upward casts,
-%BUT these seem to have strange time jump errors and are 0.5m binned...not
-%sure what processing is taking place!
-cast_type='both'; %if want both the downcast and upcast, more raw data
-
-pathname = '/Volumes/TaylorF/from_Samwise/data/MVCO/SurveyCruises/'; %once maddie is mounted
+addpath /Users/kristenhunter-cevera/MVCO_light_at_depth/seawater_ver3_2/
+pathname='/Volumes/Lab_data/MVCO/processed_CTD_casts/';
+%pathname = '/Volumes/TaylorF/from_Samwise/data/MVCO/SurveyCruises/'; %once maddie is mounted
 %pathname = '/Volumes/J_data/MVCO/SurveyCruises/';
 
-folder_list=dir(pathname);
-folder_names=extractfield(folder_list,'name'); %cell array of folder names
+filelist=dir(pathname);
+filenames=extractfield(filelist,'name'); %cell array of folder names
+temp=regexp(filenames,'\.cnv'); %find only the .cnv files
+ii=find(cellfun('isempty',temp)==0);
+filenames=filenames(ii)';
 
 %find the Tioga folders:
-ii=find(cellfun('isempty',strfind(folder_names','Tioga'))==0);
+%ii=find(cellfun('isempty',strfind(folder_names','Tioga'))==0);
+load(fullfile(pathname,'list_and_location_of_raw_ctd_files.mat'))
 
-TEMP=struct('cruise_name',{},'cruise_data',{});
+CTD=struct('cast_name',{},'file_location',{},'lat',{},'lon',{},'UTC',{},'upload_time',{},'col_headers',{},'data',{});
 
-for q=1:length(ii)
+for q=1:length(filenames)
     
-    if strcmp(cast_type,'both')
-            filelist=dir([pathname folder_names{ii(q)} '/CTD/converted/*.cnv']); %Ubin.cnv, have a choice of extracting downward or upward cast (if processed)
-        filepath=[pathname folder_names{ii(q)} '/CTD/converted/'];
+    disp(filenames{q})
+    
+    CTD(q).cast_name=filenames{q};
+    
+    jj=find(cellfun('isempty',regexp(datafiles,filenames{q}(1:end-4)))==0);
+    CTD(q).file_location=datafiles{jj};
+    
+    [lat,lon, UTC_time,upload_time,header,data]=import_cnvfile([pathname filenames{q}]);
+    
+    if ~isempty(lat) || ~isempty(lon)            
+        CTD(q).lat=[str2num(lat.deg)+str2num(lat.min)/60+str2num(lat.sec)/3600];
+        CTD(q).lon=-[str2num(lon.deg)+str2num(lon.min)/60+str2num(lon.sec)/3600];
     else
-    filelist=dir([pathname folder_names{ii(q)} '/CTD/binned/*' cast_type '.cnv']); %Ubin.cnv, have a choice of extracting downward or upward cast (if processed)
-    filepath=[pathname folder_names{ii(q)} '/CTD/binned/'];
+        CTD(q).lat=NaN;
+        CTD(q).lon=NaN;
     end
-    disp(folder_names{ii(q)})
     
-    TEMP(q).cruise_name=folder_names{ii(q)};
-    if ~isempty(filelist)
-        temp=struct('filename',{},'lat',{},'lon',{},'UTC',{},'upload_time',{},'col_headers',{},'data',{});
+    CTD(q).UTC=UTC_time;
+    CTD(q).upload_time=upload_time;
+    
+    %calculate and potential density:
+    if any(~cellfun('isempty',data)) %if non-empty cell exists:
         
-        for j=1:length(filelist)
-            filename=filelist(j).name;
-            [lat,lon, UTC_time,upload_time,header,data]=import_cnvfile([filepath filename]);
-            
-            temp(j).filename = filename;
-            temp(j).lat=lat;
-            temp(j).lon=lon;
-            temp(j).UTC=UTC_time;
-            temp(j).upload_time=upload_time;
-            temp(j).col_headers={header};
-            temp(j).data={data};
-            
-        end
-    else
-        keyboard
+        %make sure you've got the right headers:
+        s=find(cellfun('isempty',regexp(header,'Salinity'))==0);
+        t=find(cellfun('isempty',regexp(header,'Temperature'))==0);
+        p=find(cellfun('isempty',regexp(header,'Pressure'))==0);
+        
+        pdens=sw_pden(data{s},data{t},data{p},0); %0 refers to reference pressure
+        data{end+1}=pdens;
+        header{end+1}='Potential Density';
     end
     
-    TEMP(q).cruise_data=temp;
+    CTD(q).data_hdr=header;
+    CTD(q).data=data;
+    
 end
 
 
-%% Extract data from structure file and calculat potential density:
-%Slightly clunky:
-addpath /Users/kristenhunter-cevera/Dropbox/MVCO_mixed_layer_depth/seawater_ver3_2/
+%% How many files don't have lat/lon?
 
-position=[];
-file_time={};
+ii=find(cellfun('isempty',{CTD(:).lat}')==1);
+{CTD(ii).cast_name}'
+%Okay, only about 8 or so actual cruises where we are missing this data...
 
-pos_titles={'lat_deg','lat_min','lat_sec','lon_deg','lon_min','lon_sec'};
-
-data={}; hdr={};
-for q=1:length(TEMP)
-    
-    temp=TEMP(q).cruise_data; %temp is now the the structure that contains the data for each cast on that cruise
-    for j=1:length(temp)
-        
-        file_time=[file_time; {temp(j).filename} {temp(j).UTC} {temp(j).upload_time}];
-        lat=temp(j).lat;
-        lon=temp(j).lon;
-        
-        if ~isempty(lat) && ~isempty(lon)
-            position=[position;  str2num(lat.deg) str2num(lat.min) str2num(lat.sec) str2num(lon.deg) str2num(lon.min) str2num(lon.sec)];
-        elseif isempty(lat) && ~isempty(lon)
-            position=[position;  nan(1,3) str2num(lon.deg) str2num(lon.min) str2num(lon.sec)];
-        elseif isempty(lon) && ~isempty(lat)
-            position=[position; str2num(lat.deg) str2num(lat.min) str2num(lat.sec) nan(1,3) ];
-        else
-            position=[position;  nan(1,6)];
-        end
-        
-        %calculate and potential density:
-        temp_data=temp(j).data{:};
-        temp_hdr=temp(j).col_headers{:};
-        if any(~cellfun('isempty',temp_data)) %if non-empty cell exists:
-            %depth=temp_data{1}; press=temp_data{2}; temperature=temp_data{3}; sal=temp_data{5};
-            pdens=sw_pden(temp_data{5},temp_data{3},temp_data{2},0);
-            temp_data{end+1}=pdens;
-            temp_hdr{end+1}='Potential Density';
-        end
-        %now extract the data:
-        data=[data; {temp_data}];
-        hdr=[hdr; {temp_hdr}];
-        
-    end
-end
-
-if strcmp(cast_type,'Ubin') %default is downcasts
-    TEMP_upcast=TEMP;
-    data_upcast=data;
-    hdr_upcast=hdr;
-    position_upcast=position;
-end
 
 %% find only trips to tower or node:
 
-tower_ind=find((position(:,2) == 19 | position(:,2) == 20) & (position(:,5) == 33 | position(:,5) == 34));
+templat=cell2mat({CTD(:).lat}');
+templon=cell2mat({CTD(:).lon}');
 
-% in general how to access data out of the structure array:
-%TEMP(index).cruise_data.field;
+box_tower=[-70.58 -70.53 41.315 41.33];
+box_node=[-70.58 -70.53 41.33 41.345];
 
+mvco_ind=find(templat > 41.3 & templat < 41.35 & templon < -70.53 & templon > -70.60);
+%this should be about ~99 casts...
 
+%% and if curious, see where all the casts come from...
+
+plot(templon,templat,'.')
+patch([-70.53 -70.53 -70.60 -70.60],[41.3 41.35 41.35 41.3],'k','facecolor','none')
