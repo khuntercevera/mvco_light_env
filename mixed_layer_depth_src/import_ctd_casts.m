@@ -56,13 +56,16 @@ for q=1:length(filenames)
     CTD(q).data_hdr=header;
     CTD(q).data=data;
     
+    if length(header) ~= length(data)
+        keyboard
+    end
 end
 
 
 %% How many files don't have lat/lon?
 
 ii=find(cellfun('isempty',{CTD(:).lat}')==1);
-{CTD(ii).cast_name}'
+{CTD(ii).cast_name}';
 %Okay, only about 8 or so actual cruises where we are missing this data...
 
 
@@ -74,7 +77,7 @@ templon=cell2mat({CTD(:).lon}');
 box_tower=[-70.58 -70.53 41.315 41.33];
 box_node=[-70.58 -70.53 41.33 41.345];
 
-mvco_ind=find(templat > 41.3 & templat < 41.35 & templon < -70.53 & templon > -70.60);
+mvco_ind=find(templat > 41.3 & templat < 41.35 & templon < -70.53 & templon > -70.60 & cellfun('isempty',regexp({CTD(:).cast_name}','(deck)|(test)'))==1);
 %this should be about ~99 casts...
 
 %% and if curious, see where all the casts come from...

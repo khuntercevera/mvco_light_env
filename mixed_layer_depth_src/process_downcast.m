@@ -1,31 +1,36 @@
 %Okay, before can use CTD casts, need to QC data and remove troubling start
 %points and residual fresh water in salinity sensor at start:
 
-
 %for calculating potential density (pressure affect removed):
-addpath /Users/kristenhunter-cevera/Dropbox/MVCO_mixed_layer_depth/seawater_ver3_2/
+addpath /Users/kristenhunter-cevera/MVCO_light_at_depth/seawater_ver3_2/
 mld={};
+
 %%
-for q=1:length(tower_ind);
+for q=12:length(mvco_ind);
     
-    j=tower_ind(q);
-    col_hdr=hdr{j};
-    temp_data=data{j};
+    col_hdr=CTD(mvco_ind(q)).data_hdr;
+    temp_data=CTD(mvco_ind(q)).data;
     
     if any(~cellfun('isempty',temp_data))
         
-        %unload variables from cell array:
-        depth=temp_data{1};
-        press=temp_data{2};
-        temperature=temp_data{3};
-        sal=temp_data{5};
-        dens=temp_data{6};
-        pdens=temp_data{end};
-        time=file_time{j,3};
+        %find and unload desired variables from cell array:
+        dp=find(cellfun('isempty',regexp( col_hdr,'Depth'))==0);
+        s=find(cellfun('isempty',regexp( col_hdr,'Salinity'))==0);
+        t=find(cellfun('isempty',regexp( col_hdr,'Temperature'))==0);
+        p=find(cellfun('isempty',regexp( col_hdr,'Pressure'))==0);
+        de=find(cellfun('isempty',regexp( col_hdr,'[^(Potential] Density'))==0);
+        pd=find(cellfun('isempty',regexp( col_hdr,'Potential'))==0);
+        ct=find(cellfun('isempty',regexp(col_hdr,'Time, Elapsed'))==0);
         
-        %find time
-        ii=find(cellfun('isempty',regexp(col_hdr,'Time, Elapsed'))==0);
-        cast_time=temp_data{ii};
+        depth=temp_data{dp};
+        press=temp_data{p};
+        temperature=temp_data{t};
+        sal=temp_data{s};
+        dens=temp_data{de};
+        pdens=temp_data{pd};
+        cast_time=temp_data{ct};
+        
+        file_time=CTD(mvco_ind(q)).upload_time;
         
         %Now to QC data:
         %Remove any salinities with less than 25 ppt
@@ -45,7 +50,7 @@ for q=1:length(tower_ind);
         dsc=dsc_ind1:dsc_ind2; %indexes for main descent
         
         %calc Brunt-Vaisala frequency to help determine MLD, but first bin
-        if ~isempty(dc)
+        if ~isempty(dc) && max(depth) > 4 && length(dsc) > 1
             
             %for easier handling:
             depthD=depth(dsc);
@@ -71,42 +76,66 @@ for q=1:length(tower_ind);
                 binned_data(i,6)=nanmean(pdensD(ii));
             end
             
+            %calculate N2 from binned data:
             N2=sw_bfrq(binned_data(:,3),binned_data(:,4),binned_data(:,5));
+            
+            %find max N2 that is below 3.75m:
+            i3=find(binned_data(1:end-1,1) > 3.75);
+            below3_data=binned_data(i3,:);
+            below3_N2=N2(i3);
+            [mm, is]=sort(below3_N2,'descend');
+            nn=~isnan(mm);
+            mm=mm(nn); is=is(nn); %to make indexing cleaner
+            im3=is(1);
+            
+            %find max N2:
             [mm, is]=sort(N2,'descend');
             nn=~isnan(mm);
             mm=mm(nn); is=is(nn);
             im=is(1);
             
+            %and find the indicies for 4m and 12m:
+            ii4=find(binned_data(:,1)==4);
+            ii12=find(binned_data(:,1)==12);
             
-            %            %N2=sw_bfrq(smooth(sal(dsc),100),smooth(temperature(dsc),100),smooth(press(dsc),100));
-            %
-            %         ii=find(depthD > 3 & depth2 < max_depth-1);
-            %         [mm, im]=max(N2(ii(1:end-1)));
+            i3i4=find(below3_data(:,1)==4);
+            i3i12=find(below3_data(:,1)==12);
             
+            if isempty(ii12) || isempty(i3i12)
+                [aa1, ii12]=max(binned_data(:,1));
+                [aa2, i3i12]=max(below3_data(:,1));
+            end
+                
+            end
             clf %see what this metric is highlighting - over all looks pretty good!
             subplot(2,3,1,'replace'),  hold on
             %plot(pdens,depth,'k.-')
             plot(pdensD,depthD,'.','color',[0 0.5 1])
             plot(binned_data(:,6),binned_data(:,1),'.-')
             line(xlim,[binned_data(im,1) binned_data(im,1)],'color','r')
+            line(xlim,[4 4],'color',[0.5 0.5 0.5])
             set(gca,'ydir','reverse','fontsize',14)
-            xlabel('Density (kg/m^3)') %ylabel(col_hdr{6})
-            title([file_time{j,2} ' - ' datestr(file_time{j,3})])
+            xlabel('Potential Density (kg/m^3)') %ylabel(col_hdr{6})
+            title([CTD(mvco_ind(q)).cast_name ':' datestr(file_time)],'interpreter','none')
             %legend('Obs \rho','Potential \rho','location','NorthWest')
             
             subplot(2,3,2,'replace'), hold on
-            %plot(cast_time,depth,'k.-')
+            plot(cast_time,depth,'k.-')
             plot(cast_timeD,depthD,'.','color',[0 0.5 1])
             set(gca,'ydir','reverse','fontsize',14)
             xlabel('Time') %ylabel(col_hdr{6})
+            title('CTD position with time')
             
             subplot(2,3,3,'replace'), hold on
             plot(N2,binned_data(1:end-1,1),'k.-')
-            line([1e-4 1e-4], get(gca,'ylim'),'color','r')
+            line([2e-4 2e-4], get(gca,'ylim'),'color','r')
             plot(N2(im),binned_data(im,1),'rp')
+            plot(below3_N2(im3),below3_data(im3,1),'bp')
             set(gca,'ydir','reverse','fontsize',14)
             xlabel('Brunt-Vaisala Freq')
             xlim([-1e-3 1e-2])
+            line(xlim,[4 4],'color',[0.5 0.5 0.5])
+            title('N2 with depth')
             
             subplot(2,3,4,'replace'),  hold on
             %plot(temperature,depth,'k.-')
@@ -114,6 +143,8 @@ for q=1:length(tower_ind);
             plot(binned_data(:,4),binned_data(:,1),'.-')
             set(gca,'ydir','reverse','fontsize',14)
             xlabel('Temperature (\circC)') %ylabel(col_hdr{6})
+            line(xlim,[4 4],'color',[0.5 0.5 0.5])
+            title('Temperature with Depth')
             
             subplot(2,3,5,'replace'),  hold on
             plot(sal,depth,'k.-')
@@ -122,6 +153,8 @@ for q=1:length(tower_ind);
             set(gca,'ydir','reverse','fontsize',14)
             xlabel('Salinity') %ylabel(col_hdr{6})
             xlim([median(salD)-1 median(salD)+1])
+            line(xlim,[4 4],'color',[0.5 0.5 0.5])
+            title('Salinity with Depth')
             
             subplot(2,3,6,'replace'),  hold on
             plot(cast_time,sal,'k.-')
@@ -131,17 +164,18 @@ for q=1:length(tower_ind);
             
             %okay, now if everything looks good, record the depth where we
             %think some stratification is happening:
-            keyboard
-            %mld=[mld; {j time binned_data(im) N2(im)} {'down to'}];
-            
+            keyboard         
+            %mld=[mld; {CTD(mvco_ind(q)).cast_name} {file_time} {below3_N2(im)} {below3_bins(im})];
+              %mld=[mld; {CTD(mvco_ind(q)).cast_name} {file_time} {below3_N2(im3)} {below3_data(im3,1)} ...
+              %{'mixed'} {[]} {below3_data(i3i4,4)} {below3_data(i3i12,4)} {below3_data(i3i4,6)} ...
+              %{below3_data(i3i12,6)} {below3_data(i3i12,1)}]; dbcont
         end
-        
-        
+             
         if any(diff(cast_time) < 0), disp('Something wrong with time sync?'), end
-        
         
     end
     
+    clear temp_data col_hdr
 end
 
 %% fancy plot:
