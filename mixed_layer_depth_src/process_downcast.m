@@ -105,79 +105,113 @@ for q=12:length(mvco_ind);
                 [aa1, ii12]=max(binned_data(:,1));
                 [aa2, i3i12]=max(below3_data(:,1));
             end
-                
-            end
-            clf %see what this metric is highlighting - over all looks pretty good!
-            subplot(2,3,1,'replace'),  hold on
-            %plot(pdens,depth,'k.-')
-            plot(pdensD,depthD,'.','color',[0 0.5 1])
-            plot(binned_data(:,6),binned_data(:,1),'.-')
-            line(xlim,[binned_data(im,1) binned_data(im,1)],'color','r')
-            line(xlim,[4 4],'color',[0.5 0.5 0.5])
-            set(gca,'ydir','reverse','fontsize',14)
-            xlabel('Potential Density (kg/m^3)') %ylabel(col_hdr{6})
-            title([CTD(mvco_ind(q)).cast_name ':' datestr(file_time)],'interpreter','none')
-            %legend('Obs \rho','Potential \rho','location','NorthWest')
             
-            subplot(2,3,2,'replace'), hold on
-            plot(cast_time,depth,'k.-')
-            plot(cast_timeD,depthD,'.','color',[0 0.5 1])
-            set(gca,'ydir','reverse','fontsize',14)
-            xlabel('Time') %ylabel(col_hdr{6})
-            title('CTD position with time')
-            
-            subplot(2,3,3,'replace'), hold on
-            plot(N2,binned_data(1:end-1,1),'k.-')
-            line([2e-4 2e-4], get(gca,'ylim'),'color','r')
-            plot(N2(im),binned_data(im,1),'rp')
-            plot(below3_N2(im3),below3_data(im3,1),'bp')
-            set(gca,'ydir','reverse','fontsize',14)
-            xlabel('Brunt-Vaisala Freq')
-            xlim([-1e-3 1e-2])
-            line(xlim,[4 4],'color',[0.5 0.5 0.5])
-            title('N2 with depth')
-            
-            subplot(2,3,4,'replace'),  hold on
-            %plot(temperature,depth,'k.-')
-            plot(temperatureD,depthD,'.','color',[0 0.5 1])
-            plot(binned_data(:,4),binned_data(:,1),'.-')
-            set(gca,'ydir','reverse','fontsize',14)
-            xlabel('Temperature (\circC)') %ylabel(col_hdr{6})
-            line(xlim,[4 4],'color',[0.5 0.5 0.5])
-            title('Temperature with Depth')
-            
-            subplot(2,3,5,'replace'),  hold on
-            plot(sal,depth,'k.-')
-            plot(salD,depthD,'.','color',[0 0.5 1])
-            plot(binned_data(:,3),binned_data(:,1),'.-')
-            set(gca,'ydir','reverse','fontsize',14)
-            xlabel('Salinity') %ylabel(col_hdr{6})
-            xlim([median(salD)-1 median(salD)+1])
-            line(xlim,[4 4],'color',[0.5 0.5 0.5])
-            title('Salinity with Depth')
-            
-            subplot(2,3,6,'replace'),  hold on
-            plot(cast_time,sal,'k.-')
-            plot(cast_time,depth,'.-')
-            plot(cast_timeD,salD,'.','color',[0 0.5 1])
-            ylabel('Salinity') %ylabel(col_hdr{6})
-            
-            %okay, now if everything looks good, record the depth where we
-            %think some stratification is happening:
-            keyboard         
-            %mld=[mld; {CTD(mvco_ind(q)).cast_name} {file_time} {below3_N2(im)} {below3_bins(im})];
-              %mld=[mld; {CTD(mvco_ind(q)).cast_name} {file_time} {below3_N2(im3)} {below3_data(im3,1)} ...
-              %{'mixed'} {[]} {below3_data(i3i4,4)} {below3_data(i3i12,4)} {below3_data(i3i4,6)} ...
-              %{below3_data(i3i12,6)} {below3_data(i3i12,1)}]; dbcont
         end
-             
-        if any(diff(cast_time) < 0), disp('Something wrong with time sync?'), end
+        clf %see what this metric is highlighting - over all looks pretty good!
+        subplot(2,3,1,'replace'),  hold on
+        %plot(pdens,depth,'k.-')
+        plot(pdensD,depthD,'.','color',[0 0.5 1])
+        plot(binned_data(:,6),binned_data(:,1),'.-')
+        line(xlim,[binned_data(im,1) binned_data(im,1)],'color','r')
+        line(xlim,[4 4],'color',[0.5 0.5 0.5])
+        set(gca,'ydir','reverse','fontsize',14)
+        xlabel('Potential Density (kg/m^3)') %ylabel(col_hdr{6})
+        title([CTD(mvco_ind(q)).cast_name ':' datestr(file_time)],'interpreter','none')
+        %legend('Obs \rho','Potential \rho','location','NorthWest')
         
+        subplot(2,3,2,'replace'), hold on
+        plot(cast_time,depth,'k.-')
+        plot(cast_timeD,depthD,'.','color',[0 0.5 1])
+        set(gca,'ydir','reverse','fontsize',14)
+        xlabel('Time') %ylabel(col_hdr{6})
+        title('CTD position with time')
+        
+        subplot(2,3,3,'replace'), hold on
+        plot(N2,binned_data(1:end-1,1),'k.-')
+        line([2e-4 2e-4], get(gca,'ylim'),'color','r')
+        plot(N2(im),binned_data(im,1),'rp')
+        plot(below3_N2(im3),below3_data(im3,1),'bp')
+        set(gca,'ydir','reverse','fontsize',14)
+        xlabel('Brunt-Vaisala Freq')
+        xlim([-1e-3 1e-2])
+        line(xlim,[4 4],'color',[0.5 0.5 0.5])
+        title('N2 with depth')
+        
+        subplot(2,3,4,'replace'),  hold on
+        %plot(temperature,depth,'k.-')
+        plot(temperatureD,depthD,'.','color',[0 0.5 1])
+        plot(binned_data(:,4),binned_data(:,1),'.-')
+        set(gca,'ydir','reverse','fontsize',14)
+        xlabel('Temperature (\circC)') %ylabel(col_hdr{6})
+        line(xlim,[4 4],'color',[0.5 0.5 0.5])
+        title('Temperature with Depth')
+        
+        subplot(2,3,5,'replace'),  hold on
+        plot(sal,depth,'k.-')
+        plot(salD,depthD,'.','color',[0 0.5 1])
+        plot(binned_data(:,3),binned_data(:,1),'.-')
+        set(gca,'ydir','reverse','fontsize',14)
+        xlabel('Salinity') %ylabel(col_hdr{6})
+        xlim([median(salD)-1 median(salD)+1])
+        line(xlim,[4 4],'color',[0.5 0.5 0.5])
+        title('Salinity with Depth')
+        
+        subplot(2,3,6,'replace'),  hold on
+        plot(cast_time,sal,'k.-')
+        plot(cast_time,depth,'.-')
+        plot(cast_timeD,salD,'.','color',[0 0.5 1])
+        ylabel('Salinity') %ylabel(col_hdr{6})
+        
+        %okay, now if everything looks good, record the depth where we
+        %think some stratification is happening:
+        keyboard
+        %mld=[mld; {CTD(mvco_ind(q)).cast_name} {file_time} {below3_N2(im)} {below3_bins(im})];
+        %mld=[mld; {CTD(mvco_ind(q)).cast_name} {file_time} {below3_N2(im3)} {below3_data(im3,1)} ...
+        %{'mixed'} {[]} {below3_data(i3i4,4)} {below3_data(i3i12,4)} {below3_data(i3i4,6)} ...
+        %{below3_data(i3i12,6)} {below3_data(i3i12,1)}]; dbcont
     end
     
+    if any(diff(cast_time) < 0), disp('Something wrong with time sync?'), end
     clear temp_data col_hdr
 end
 
+mld_hdr={'cast name';'time of file';'max N2 (<3.75m)'; 'Depth for ax N2'; 'call on water column';'reason';'4m temp';'12m temp';'4m pdens';'12m pdens';'If not 12m, lowest depth'};
+%end
+
+
+%% Okay and now some plots to try to make sense of this mess...
+
+%Compare difference of temp to diff of density, color coded for stratified
+%or not....
+
+%first remove empty rows where something went awry:
+ii=find(cellfun('isempty',mld(:,7))==0 & cellfun('isempty',mld(:,8))==0 & cellfun('isempty',mld(:,9))==0 & cellfun('isempty',mld(:,10))==0);
+%%
+mld2use=mld(ii,:);
+ss=find(cellfun('isempty',regexp(mld2use(:,5),'stratified'))==0);
+mm=find(cellfun('isempty',regexp(mld2use(:,5),'stratified'))==1);
+%%
+plot(cell2mat(mld2use(ss,7))-cell2mat(mld2use(ss,8)),cell2mat(mld2use(ss,9))-cell2mat(mld2use(ss,10)),'r.'), hold on
+plot(cell2mat(mld2use(mm,7))-cell2mat(mld2use(mm,8)),cell2mat(mld2use(mm,9))-cell2mat(mld2use(mm,10)),'b.')
+
+%%
+
+scatter(cell2mat(mld2use(ss,7))-cell2mat(mld2use(ss,8)),cell2mat(mld2use(ss,9))-cell2mat(mld2use(ss,10)),50,cell2mat(mld2use(ss,3)),'filled'), hold on
+scatter(cell2mat(mld2use(mm,7))-cell2mat(mld2use(mm,8)),cell2mat(mld2use(mm,9))-cell2mat(mld2use(mm,10)),50,cell2mat(mld2use(mm,3)),'filled')
+plot(cell2mat(mld2use(ss,7))-cell2mat(mld2use(ss,8)),cell2mat(mld2use(ss,9))-cell2mat(mld2use(ss,10)),'ro'), hold on
+plot(cell2mat(mld2use(mm,7))-cell2mat(mld2use(mm,8)),cell2mat(mld2use(mm,9))-cell2mat(mld2use(mm,10)),'bo')
+colorbar
+
+%%
+clf
+plot(cell2mat(mld2use(mm,9))-cell2mat(mld2use(mm,10)),cell2mat(mld2use(mm,3)),'bo')
+hold on
+plot(cell2mat(mld2use(ss,9))-cell2mat(mld2use(ss,10)),cell2mat(mld2use(ss,3)),'ro')
+xlabel('Density difference between 4m and 12m')
+ylabel('Max N2 somewhere along water column')
+
+
+%% OLDER MATERIAL BEFORE JULY 2017:
 %% fancy plot:
 clf, hold on
 for q=1:length(mld)
@@ -242,10 +276,10 @@ for q=1:length(mld)
         pdensD=pdens(dsc);
         cast_timeD=cast_time(dsc);
         
-        jj=find(depthD>=4);
-        if ~isempty(jj)
-            mld{q,6}=temperatureD(jj(1));
-            mld{q,7}=pdensD(jj(1));
+        ss=find(depthD>=4);
+        if ~isempty(ss)
+            mld{q,6}=temperatureD(ss(1));
+            mld{q,7}=pdensD(ss(1));
         else
             mld{q,6}=NaN;
             mld{q,7}=NaN;
