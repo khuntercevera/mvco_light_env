@@ -3,10 +3,10 @@
 
 %for calculating potential density (pressure affect removed):
 addpath /Users/kristenhunter-cevera/MVCO_light_at_depth/seawater_ver3_2/
-mld={};
+mld2={};
 
 %%
-for q=12:length(mvco_ind);
+for q=1:length(mvco_ind);
     
     col_hdr=CTD(mvco_ind(q)).data_hdr;
     temp_data=CTD(mvco_ind(q)).data;
@@ -48,6 +48,7 @@ for q=12:length(mvco_ind);
         dsc_ind1=dc(nonconsec(ind)+1);
         dsc_ind2=dc(nonconsec(ind+1));
         dsc=dsc_ind1:dsc_ind2; %indexes for main descent
+        usc=dsc_ind2+1:length(depth); %and the upcast!
         
         %calc Brunt-Vaisala frequency to help determine MLD, but first bin
         if ~isempty(dc) && max(depth) > 4 && length(dsc) > 1
@@ -60,59 +61,80 @@ for q=12:length(mvco_ind);
             pdensD=pdens(dsc);
             cast_timeD=cast_time(dsc);
             
+            depthU=depth(usc);
+            salU=sal(usc);
+            temperatureU=temperature(usc);
+            pressU=press(usc);
+            pdensU=pdens(usc);
+            cast_timeU=cast_time(usc);
+            
+            
             %bin variables into ~0.25 m bins:
             max_depth=max(depthD);
             min_depth=min(depthD);
             
             depth_bins=floor(min_depth):0.25:ceil(max_depth);
-            binned_data=nan(length(depth_bins),6);
+            binned_dataD=nan(length(depth_bins),6);
+            binned_dataU=nan(length(depth_bins),6);
             for i=1:length(depth_bins)-1
                 ii=find(depthD >= depth_bins(i) & depthD < depth_bins(i+1));
-                binned_data(i,1)=depth_bins(i);
-                binned_data(i,2)=nanmean(depthD(ii));
-                binned_data(i,3)=nanmean(salD(ii));
-                binned_data(i,4)=nanmean(temperatureD(ii));
-                binned_data(i,5)=nanmean(pressD(ii));
-                binned_data(i,6)=nanmean(pdensD(ii));
+                binned_dataD(i,1)=depth_bins(i);
+                binned_dataD(i,2)=nanmean(depthD(ii));
+                binned_dataD(i,3)=nanmean(salD(ii));
+                binned_dataD(i,4)=nanmean(temperatureD(ii));
+                binned_dataD(i,5)=nanmean(pressD(ii));
+                binned_dataD(i,6)=nanmean(pdensD(ii));
+                
+                jj=find(depthU >= depth_bins(i) & depthU < depth_bins(i+1));
+                binned_dataU(i,1)=depth_bins(i);
+                binned_dataU(i,2)=nanmean(depthU(jj));
+                binned_dataU(i,3)=nanmean(salU(jj));
+                binned_dataU(i,4)=nanmean(temperatureU(jj));
+                binned_dataU(i,5)=nanmean(pressU(jj));
+                binned_dataU(i,6)=nanmean(pdensU(jj));
             end
             
             %calculate N2 from binned data:
-            N2=sw_bfrq(binned_data(:,3),binned_data(:,4),binned_data(:,5));
+            N2D=sw_bfrq(binned_dataD(:,3),binned_dataD(:,4),binned_dataD(:,5));
+            N2U=sw_bfrq(binned_dataU(:,3),binned_dataU(:,4),binned_dataU(:,5));
+            %we need to see what the max N2 is, and what N2 is at 4m...
             
-            %find max N2 that is below 3.75m:
-            i3=find(binned_data(1:end-1,1) > 3.75);
-            below3_data=binned_data(i3,:);
-            below3_N2=N2(i3);
-            [mm, is]=sort(below3_N2,'descend');
-            nn=~isnan(mm);
-            mm=mm(nn); is=is(nn); %to make indexing cleaner
-            im3=is(1);
+            %If salinity data doesn't really match on the upcast, then exclude this in the downcast:
+            %maybe only consider N2 values that are below 3m to avoid false positives:
+                
+            delta_salU=max(salU(find(depthU < 4)))-min(salU(find(depthU < 4)));
+            delta_salD=max(salD(find(depthD < 4)))-min(salD(find(depthD < 4)));
             
-            %find max N2:
-            [mm, is]=sort(N2,'descend');
-            nn=~isnan(mm);
-            mm=mm(nn); is=is(nn);
-            im=is(1);
-            
-            %and find the indicies for 4m and 12m:
-            ii4=find(binned_data(:,1)==4);
-            ii12=find(binned_data(:,1)==12);
-            
-            i3i4=find(below3_data(:,1)==4);
-            i3i12=find(below3_data(:,1)==12);
-            
-            if isempty(ii12) || isempty(i3i12)
-                [aa1, ii12]=max(binned_data(:,1));
-                [aa2, i3i12]=max(below3_data(:,1));
+            if abs(delta_salD./delta_salU) > 2
+                disp('Salinity on the down cast questionable...going with upcast for now...')
+                upcast_flag=1;
+                binne_data=binned_dataU;
+                N2=N2U;
+            else
+                binne_data=binned_dataD;
+                N2=N2D;
+                upcast_flag=0;
             end
             
+            i3=find(binned_dataD(1:end-1,1) > 3);
+            [mm, is]=sort(N2(i3),'descend');
+            nn=find(~isnan(mm)); %avoid nan's
+            mm=mm(nn); is=is(nn); %to make indexing cleaner
+            im=i3(nn(is(1))); %index corresponds to max N2 value below 3 m...
+            
+            %and find the indicies for 4m and 12m (or closet depth):
+            [d4,ii4]=min(abs(binned_dataD(:,1)-4));
+            [d12,ii12]=min(abs(binned_dataD(:,1)-12));
+            
         end
+        
         clf %see what this metric is highlighting - over all looks pretty good!
         subplot(2,3,1,'replace'),  hold on
         %plot(pdens,depth,'k.-')
         plot(pdensD,depthD,'.','color',[0 0.5 1])
-        plot(binned_data(:,6),binned_data(:,1),'.-')
-        line(xlim,[binned_data(im,1) binned_data(im,1)],'color','r')
+        plot(pdensU,depthU,'.','color',[1 0.5 0])
+        plot(binned_dataD(:,6),binned_dataD(:,1),'.-')
+        line(xlim,[binned_dataD(im,1) binned_dataD(im,1)],'color','r')
         line(xlim,[4 4],'color',[0.5 0.5 0.5])
         set(gca,'ydir','reverse','fontsize',14)
         xlabel('Potential Density (kg/m^3)') %ylabel(col_hdr{6})
@@ -122,15 +144,16 @@ for q=12:length(mvco_ind);
         subplot(2,3,2,'replace'), hold on
         plot(cast_time,depth,'k.-')
         plot(cast_timeD,depthD,'.','color',[0 0.5 1])
+        plot(cast_timeU,depthU,'.','color',[1 0.5 0])
         set(gca,'ydir','reverse','fontsize',14)
         xlabel('Time') %ylabel(col_hdr{6})
         title('CTD position with time')
         
         subplot(2,3,3,'replace'), hold on
-        plot(N2,binned_data(1:end-1,1),'k.-')
-        line([2e-4 2e-4], get(gca,'ylim'),'color','r')
-        plot(N2(im),binned_data(im,1),'rp')
-        plot(below3_N2(im3),below3_data(im3,1),'bp')
+        plot(N2,binned_dataD(1:end-1,1),'k.-')
+        plot(N2U,binned_dataU(1:end-1,1),'r.-')
+        line([2.5e-4 2.5e-4], get(gca,'ylim'),'color','r') %anything higher than this and you are probably stratified
+        plot(N2(im),binned_dataD(im,1),'rp') %max only considering below 3.75m
         set(gca,'ydir','reverse','fontsize',14)
         xlabel('Brunt-Vaisala Freq')
         xlim([-1e-3 1e-2])
@@ -140,7 +163,9 @@ for q=12:length(mvco_ind);
         subplot(2,3,4,'replace'),  hold on
         %plot(temperature,depth,'k.-')
         plot(temperatureD,depthD,'.','color',[0 0.5 1])
-        plot(binned_data(:,4),binned_data(:,1),'.-')
+        plot(binned_dataD(:,4),binned_dataD(:,1),'.-')
+         plot(temperatureU,depthU,'.','color',[1 0.5 0])
+        plot(binned_dataU(:,4),binned_dataU(:,1),'r.-')
         set(gca,'ydir','reverse','fontsize',14)
         xlabel('Temperature (\circC)') %ylabel(col_hdr{6})
         line(xlim,[4 4],'color',[0.5 0.5 0.5])
@@ -149,7 +174,9 @@ for q=12:length(mvco_ind);
         subplot(2,3,5,'replace'),  hold on
         plot(sal,depth,'k.-')
         plot(salD,depthD,'.','color',[0 0.5 1])
-        plot(binned_data(:,3),binned_data(:,1),'.-')
+        plot(binned_dataD(:,3),binned_dataD(:,1),'.-')
+        plot(salU,depthU,'.','color',[1 0.5 0])
+        plot(binned_dataU(:,3),binned_dataU(:,1),'.-')
         set(gca,'ydir','reverse','fontsize',14)
         xlabel('Salinity') %ylabel(col_hdr{6})
         xlim([median(salD)-1 median(salD)+1])
@@ -157,26 +184,42 @@ for q=12:length(mvco_ind);
         title('Salinity with Depth')
         
         subplot(2,3,6,'replace'),  hold on
-        plot(cast_time,sal,'k.-')
-        plot(cast_time,depth,'.-')
+        plot(cast_time,sal,'k.-')       
         plot(cast_timeD,salD,'.','color',[0 0.5 1])
+        plot(cast_timeU,salU,'.','color',[1 0.5 0])       
+        plot(cast_time,depth,'.-')
         ylabel('Salinity') %ylabel(col_hdr{6})
         
-        %okay, now if everything looks good, record the depth where we
-        %think some stratification is happening:
-        keyboard
-        %mld=[mld; {CTD(mvco_ind(q)).cast_name} {file_time} {below3_N2(im)} {below3_bins(im})];
-        %mld=[mld; {CTD(mvco_ind(q)).cast_name} {file_time} {below3_N2(im3)} {below3_data(im3,1)} ...
-        %{'mixed'} {[]} {below3_data(i3i4,4)} {below3_data(i3i12,4)} {below3_data(i3i4,6)} ...
-        %{below3_data(i3i12,6)} {below3_data(i3i12,1)}]; dbcont
+        %keyboard
+        
+        %Is the water stratified? Or wouldn't be well mixed?
+        %Looking at Young-Oh's slide, it looks like the min would be around
+        %.25 * 10^-4 N2 (S^{-2})...
+        
+        %mld2=[mld2; {CTD(mvco_ind(q)).cast_name} {file_time} {below3_N2(im)} {below3_bins(im})];
+        
+        if N2(im) <= 2.5e-4 %well mixed:
+            mld2=[mld2; {CTD(mvco_ind(q)).cast_name} {file_time} {N2(im)} {binned_data(im,1)} {'mixed'} ...
+                {binned_data(ii4,1)} {N2(ii4)} {binned_data(ii4,4)} {binned_data(ii4,6)} ... %depth, N2, temp and dens at 4m
+                {binned_data(ii12,1)} {N2(ii12)} {binned_data(ii12,4)} {binned_data(ii12,6)} {upcast_flag}];  %depth, N2, temp and dens at 12m
+        else
+            mld2=[mld2; {CTD(mvco_ind(q)).cast_name} {file_time} {N2(im)} {binned_data(im,1)} {'stratified'} ...
+                {binned_data(ii4,1)} {N2(ii4)} {binned_data(ii4,4)} {binned_data(ii4,6)} ... %depth, N2, temp and dens at 4m
+                {binned_data(ii12,1)} {N2(ii12)} {binned_data(ii12,4)} {binned_data(ii12,6)} {upcast_flag}];  %depth, N2, temp and dens at 12m
+        end
+        
+        
     end
+    
+    pause
     
     if any(diff(cast_time) < 0), disp('Something wrong with time sync?'), end
     clear temp_data col_hdr
+    
 end
 
-mld_hdr={'cast name';'time of file';'max N2 (<3.75m)'; 'Depth for ax N2'; 'call on water column';'reason';'4m temp';'12m temp';'4m pdens';'12m pdens';'If not 12m, lowest depth'};
-%end
+%mld_hdr={'cast name';'time of file';'max N2 (<3.75m)'; 'Depth for ax N2'; 'call on water column';'reason';'4m temp';'12m temp';'4m pdens';'12m pdens';'If not 12m, lowest depth'};
+
 
 
 %% Okay and now some plots to try to make sense of this mess...
