@@ -4,9 +4,15 @@
 %for calculating potential density (pressure affect removed):
 addpath /Users/kristenhunter-cevera/MVCO_light_at_depth/seawater_ver3_2/
 mld2={};
+plotflag=1;
+warning off
 
+mld_titles={'cast name'; 'file_time'; 'max N2'; 'depth of max N2'; 'stratified?'; ...
+                'closest depth to 4m'; 'N2 closest to 4m'; 'temperature closest to 4m'; 'pdens closest to 4m'; ... %depth, N2, temp and dens at 4m
+                'closest depth to 12m'; 'N2 closest to 12m'; 'temperature closest to 12m'; 'pdens closest to 12m'; 'upcast_flag';'manual edit'};  %depth, N2, temp and dens at 12m
+          
 %%
-for q=1:length(mvco_ind);
+for q=90:length(mvco_ind);
     
     col_hdr=CTD(mvco_ind(q)).data_hdr;
     temp_data=CTD(mvco_ind(q)).data;
@@ -70,8 +76,8 @@ for q=1:length(mvco_ind);
             
             
             %bin variables into ~0.25 m bins:
-            max_depth=max(depthD);
-            min_depth=min(depthD);
+            max_depth=max([depthD;depthU]);
+            min_depth=min([depthD;depthU]);
             
             depth_bins=floor(min_depth):0.25:ceil(max_depth);
             binned_dataD=nan(length(depth_bins),6);
@@ -101,96 +107,101 @@ for q=1:length(mvco_ind);
             
             %If salinity data doesn't really match on the upcast, then exclude this in the downcast:
             %maybe only consider N2 values that are below 3m to avoid false positives:
-                
+            
             delta_salU=max(salU(find(depthU < 4)))-min(salU(find(depthU < 4)));
             delta_salD=max(salD(find(depthD < 4)))-min(salD(find(depthD < 4)));
             
             if abs(delta_salD./delta_salU) > 2
                 disp('Salinity on the down cast questionable...going with upcast for now...')
                 upcast_flag=1;
-                binne_data=binned_dataU;
+                binned_data=binned_dataU;
                 N2=N2U;
             else
-                binne_data=binned_dataD;
+                disp('Salinity difference is reasonable, going with downcast for now...')
+                binned_data=binned_dataD;
                 N2=N2D;
                 upcast_flag=0;
             end
             
-            i3=find(binned_dataD(1:end-1,1) > 3);
+            i3=find(binned_data(1:end-1,1) > 3);
             [mm, is]=sort(N2(i3),'descend');
             nn=find(~isnan(mm)); %avoid nan's
             mm=mm(nn); is=is(nn); %to make indexing cleaner
-            im=i3(nn(is(1))); %index corresponds to max N2 value below 3 m...
+            im=i3(is(1)); %index corresponds to max N2 value below 3 m...
             
             %and find the indicies for 4m and 12m (or closet depth):
-            [d4,ii4]=min(abs(binned_dataD(:,1)-4));
-            [d12,ii12]=min(abs(binned_dataD(:,1)-12));
+            [d4,ii4]=min(abs(binned_data(:,1)-4));
+            [d12,ii12]=min(abs(binned_data(:,1)-12));
             
         end
         
-        clf %see what this metric is highlighting - over all looks pretty good!
-        subplot(2,3,1,'replace'),  hold on
-        %plot(pdens,depth,'k.-')
-        plot(pdensD,depthD,'.','color',[0 0.5 1])
-        plot(pdensU,depthU,'.','color',[1 0.5 0])
-        plot(binned_dataD(:,6),binned_dataD(:,1),'.-')
-        line(xlim,[binned_dataD(im,1) binned_dataD(im,1)],'color','r')
-        line(xlim,[4 4],'color',[0.5 0.5 0.5])
-        set(gca,'ydir','reverse','fontsize',14)
-        xlabel('Potential Density (kg/m^3)') %ylabel(col_hdr{6})
-        title([CTD(mvco_ind(q)).cast_name ':' datestr(file_time)],'interpreter','none')
-        %legend('Obs \rho','Potential \rho','location','NorthWest')
+        if plotflag==1
+            clf %see what this metric is highlighting - over all looks pretty good!
+            subplot(2,3,1,'replace'),  hold on
+            %plot(pdens,depth,'k.-')
+            plot(pdensD,depthD,'.','color',[0 0.5 1])
+            plot(pdensU,depthU,'.','color',[1 0.5 0])
+            plot(binned_dataD(:,6),binned_dataD(:,1),'.-')
+            line(xlim,[binned_dataD(im,1) binned_dataD(im,1)],'color','r')
+            line(xlim,[4 4],'color',[0.5 0.5 0.5])
+            set(gca,'ydir','reverse','fontsize',14)
+            xlabel('Potential Density (kg/m^3)') %ylabel(col_hdr{6})
+            title([CTD(mvco_ind(q)).cast_name ':' datestr(file_time)],'interpreter','none')
+            %legend('Obs \rho','Potential \rho','location','NorthWest')
+            
+            subplot(2,3,2,'replace'), hold on
+            plot(cast_time,depth,'k.-')
+            plot(cast_timeD,depthD,'.','color',[0 0.5 1])
+            plot(cast_timeU,depthU,'.','color',[1 0.5 0])
+            set(gca,'ydir','reverse','fontsize',14)
+            xlabel('Time') %ylabel(col_hdr{6})
+            title('CTD position with time')
+            
+            subplot(2,3,3,'replace'), hold on
+            plot(N2D,binned_dataD(1:end-1,1),'.-','color',[0 0.5 1])
+            plot(N2U,binned_dataU(1:end-1,1),'r.-','color',[1 0.5 0])
+            line([3e-4 3e-4], get(gca,'ylim'),'color','r') %anything higher than this and you are probably stratified
+            plot(N2(im),binned_dataD(im,1),'bp','markersize',12) %max only considering below 3.75m
+            set(gca,'ydir','reverse','fontsize',14)
+            xlabel('Brunt-Vaisala Freq')
+            xlim([-1e-3 1e-2])
+            line(xlim,[4 4],'color',[0.5 0.5 0.5])
+            title('N2 with depth')
+            
+            subplot(2,3,4,'replace'),  hold on
+            %plot(temperature,depth,'k.-')
+            plot(temperatureD,depthD,'.','color',[0 0.5 1])
+            plot(binned_dataD(:,4),binned_dataD(:,1),'.-')
+            plot(temperatureU,depthU,'.','color',[1 0.5 0])
+            plot(binned_dataU(:,4),binned_dataU(:,1),'r.-')
+            set(gca,'ydir','reverse','fontsize',14)
+            xlabel('Temperature (\circC)') %ylabel(col_hdr{6})
+            line(xlim,[4 4],'color',[0.5 0.5 0.5])
+            title('Temperature with Depth')
+            
+            subplot(2,3,5,'replace'),  hold on
+            plot(sal,depth,'k.-')
+            plot(salD,depthD,'.','color',[0 0.5 1])
+            plot(binned_dataD(:,3),binned_dataD(:,1),'.-')
+            plot(salU,depthU,'.','color',[1 0.5 0])
+            plot(binned_dataU(:,3),binned_dataU(:,1),'.-')
+            set(gca,'ydir','reverse','fontsize',14)
+            xlabel('Salinity') %ylabel(col_hdr{6})
+            xlim([median(salD)-1 median(salD)+1])
+            line(xlim,[4 4],'color',[0.5 0.5 0.5])
+            title('Salinity with Depth')
+            
+            subplot(2,3,6,'replace'),  hold on
+            plot(cast_time,sal,'k.-')
+            plot(cast_timeD,salD,'.','color',[0 0.5 1])
+            plot(cast_timeU,salU,'.','color',[1 0.5 0])
+            plot(cast_time,depth,'.-')
+            ylabel('Salinity') %ylabel(col_hdr{6})
+            
+            %pause
+        end %plotflag
         
-        subplot(2,3,2,'replace'), hold on
-        plot(cast_time,depth,'k.-')
-        plot(cast_timeD,depthD,'.','color',[0 0.5 1])
-        plot(cast_timeU,depthU,'.','color',[1 0.5 0])
-        set(gca,'ydir','reverse','fontsize',14)
-        xlabel('Time') %ylabel(col_hdr{6})
-        title('CTD position with time')
-        
-        subplot(2,3,3,'replace'), hold on
-        plot(N2,binned_dataD(1:end-1,1),'k.-')
-        plot(N2U,binned_dataU(1:end-1,1),'r.-')
-        line([2.5e-4 2.5e-4], get(gca,'ylim'),'color','r') %anything higher than this and you are probably stratified
-        plot(N2(im),binned_dataD(im,1),'rp') %max only considering below 3.75m
-        set(gca,'ydir','reverse','fontsize',14)
-        xlabel('Brunt-Vaisala Freq')
-        xlim([-1e-3 1e-2])
-        line(xlim,[4 4],'color',[0.5 0.5 0.5])
-        title('N2 with depth')
-        
-        subplot(2,3,4,'replace'),  hold on
-        %plot(temperature,depth,'k.-')
-        plot(temperatureD,depthD,'.','color',[0 0.5 1])
-        plot(binned_dataD(:,4),binned_dataD(:,1),'.-')
-         plot(temperatureU,depthU,'.','color',[1 0.5 0])
-        plot(binned_dataU(:,4),binned_dataU(:,1),'r.-')
-        set(gca,'ydir','reverse','fontsize',14)
-        xlabel('Temperature (\circC)') %ylabel(col_hdr{6})
-        line(xlim,[4 4],'color',[0.5 0.5 0.5])
-        title('Temperature with Depth')
-        
-        subplot(2,3,5,'replace'),  hold on
-        plot(sal,depth,'k.-')
-        plot(salD,depthD,'.','color',[0 0.5 1])
-        plot(binned_dataD(:,3),binned_dataD(:,1),'.-')
-        plot(salU,depthU,'.','color',[1 0.5 0])
-        plot(binned_dataU(:,3),binned_dataU(:,1),'.-')
-        set(gca,'ydir','reverse','fontsize',14)
-        xlabel('Salinity') %ylabel(col_hdr{6})
-        xlim([median(salD)-1 median(salD)+1])
-        line(xlim,[4 4],'color',[0.5 0.5 0.5])
-        title('Salinity with Depth')
-        
-        subplot(2,3,6,'replace'),  hold on
-        plot(cast_time,sal,'k.-')       
-        plot(cast_timeD,salD,'.','color',[0 0.5 1])
-        plot(cast_timeU,salU,'.','color',[1 0.5 0])       
-        plot(cast_time,depth,'.-')
-        ylabel('Salinity') %ylabel(col_hdr{6})
-        
-        %keyboard
+        keyboard
         
         %Is the water stratified? Or wouldn't be well mixed?
         %Looking at Young-Oh's slide, it looks like the min would be around
@@ -198,25 +209,27 @@ for q=1:length(mvco_ind);
         
         %mld2=[mld2; {CTD(mvco_ind(q)).cast_name} {file_time} {below3_N2(im)} {below3_bins(im})];
         
-        if N2(im) <= 2.5e-4 %well mixed:
+        if N2(im) <= 3e-4 %well mixed:
             mld2=[mld2; {CTD(mvco_ind(q)).cast_name} {file_time} {N2(im)} {binned_data(im,1)} {'mixed'} ...
                 {binned_data(ii4,1)} {N2(ii4)} {binned_data(ii4,4)} {binned_data(ii4,6)} ... %depth, N2, temp and dens at 4m
-                {binned_data(ii12,1)} {N2(ii12)} {binned_data(ii12,4)} {binned_data(ii12,6)} {upcast_flag}];  %depth, N2, temp and dens at 12m
+                {binned_data(ii12,1)} {N2(ii12)} {binned_data(ii12,4)} {binned_data(ii12,6)} {upcast_flag} {'auto'}];  %depth, N2, temp and dens at 12m
+            disp('Mixed!')
+            disp(num2str(N2(im)))
         else
             mld2=[mld2; {CTD(mvco_ind(q)).cast_name} {file_time} {N2(im)} {binned_data(im,1)} {'stratified'} ...
                 {binned_data(ii4,1)} {N2(ii4)} {binned_data(ii4,4)} {binned_data(ii4,6)} ... %depth, N2, temp and dens at 4m
-                {binned_data(ii12,1)} {N2(ii12)} {binned_data(ii12,4)} {binned_data(ii12,6)} {upcast_flag}];  %depth, N2, temp and dens at 12m
+                {binned_data(ii12,1)} {N2(ii12)} {binned_data(ii12,4)} {binned_data(ii12,6)} {upcast_flag} {'auto'}];  %depth, N2, temp and dens at 12m
+            disp('Stratified!')
+            disp(num2str(N2(im)))
         end
+          
         
+        if any(diff(cast_time) < 0), disp('Something wrong with time sync?'), end
+        clear temp_data col_hdr
         
-    end
+    end %if not empty
     
-    pause
-    
-    if any(diff(cast_time) < 0), disp('Something wrong with time sync?'), end
-    clear temp_data col_hdr
-    
-end
+end %for loop
 
 %mld_hdr={'cast name';'time of file';'max N2 (<3.75m)'; 'Depth for ax N2'; 'call on water column';'reason';'4m temp';'12m temp';'4m pdens';'12m pdens';'If not 12m, lowest depth'};
 
@@ -228,30 +241,111 @@ end
 %or not....
 
 %first remove empty rows where something went awry:
+mld=mld2;
 ii=find(cellfun('isempty',mld(:,7))==0 & cellfun('isempty',mld(:,8))==0 & cellfun('isempty',mld(:,9))==0 & cellfun('isempty',mld(:,10))==0);
+
 %%
 mld2use=mld(ii,:);
 ss=find(cellfun('isempty',regexp(mld2use(:,5),'stratified'))==0);
 mm=find(cellfun('isempty',regexp(mld2use(:,5),'stratified'))==1);
-%%
-plot(cell2mat(mld2use(ss,7))-cell2mat(mld2use(ss,8)),cell2mat(mld2use(ss,9))-cell2mat(mld2use(ss,10)),'r.'), hold on
-plot(cell2mat(mld2use(mm,7))-cell2mat(mld2use(mm,8)),cell2mat(mld2use(mm,9))-cell2mat(mld2use(mm,10)),'b.')
+%% diff in temp vs. diff in dens
+clf
+plot(cell2mat(mld2use(ss,8))-cell2mat(mld2use(ss,12)),cell2mat(mld2use(ss,9))-cell2mat(mld2use(ss,13)),'r.','markersize',12), hold on
+plot(cell2mat(mld2use(mm,8))-cell2mat(mld2use(mm,12)),cell2mat(mld2use(mm,9))-cell2mat(mld2use(mm,13)),'b.','markersize',12)
+
+xlabel('Temperature difference between 4m and 12m (\circC)')
+ylabel('Density difference between 4m and 12m (\circC)')
+
+%in general this is a tight relationship, and gives confidence to use temp
+%diff as a proxy for density diff
+
+%but the real question is how does density (or temp diff) for that matter
+%correlate to actual stratification?
+
+%% MUST PLOT TEMP DIFF AGAINST N2!!!!
+subplot(2,2,1,'replace')
+plot(cell2mat(mld2use(:,8))-cell2mat(mld2use(:,12)),cell2mat(mld2use(:,3)),'.')
+xlabel('Temperature difference between 4m and 12m (\circC)')
+ylabel('Max Brunt Vaisala Frequency')
+
+subplot(2,2,2,'replace'), hold on
+plot(cell2mat(mld2use(:,13))-cell2mat(mld2use(:,9)),(cell2mat(mld2use(:,3))),'.')
+xlabel('Density difference between 4m and 12m (kg/m^{3})')
+ylabel('Max Brunt Vaisala Frequency')
+line(xlim,[3e-4 3e-4],'color',[0.5 0.5 0.5])
+%Brunt Vaisala freq does show a nice correlation with density difference
+X=cell2mat(mld2use(:,13))-cell2mat(mld2use(:,9));
+Y=cell2mat(mld2use(:,3));
+[B,BINT,~,~,STATS] = regress(Y,[ones(size(X)) X]); 
+plot(sort(X),B(1)+B(2)*sort(X),'r-')
+
+subplot(2,2,3,'replace'), hold on
+plot(cell2mat(mld2use(:,12))-cell2mat(mld2use(:,8)),(cell2mat(mld2use(:,3))),'.')
+xlabel('Temperature difference between 4m and 12m (kg/m^{3})')
+ylabel('Max Brunt Vaisala Frequency')
+set(gca,'yscale','log')
+line(xlim,[3e-4 3e-4],'color',[0.5 0.5 0.5])
+%Brunt Vaisala freq does show a nice correlation with density difference,
+%but even more beautiful relationship as log!
+
 
 %%
+figure
+subplot(2,2,4,'replace'), 
+%
+figure, hold on
+plot(cell2mat(mld2use(:,13))-cell2mat(mld2use(:,9)),log10((cell2mat(mld2use(:,3)))),'.')
+xlabel('Density difference between 4m and 12m (kg/m^{3})')
+ylabel('Max Brunt Vaisala Frequency')
+%set(gca,'yscale','log','box','on')
+line(xlim,log10([3e-4 3e-4]),'color',[0.5 0.5 0.5])
+%Brunt Vaisala freq does show a nice correlation with density difference
 
-scatter(cell2mat(mld2use(ss,7))-cell2mat(mld2use(ss,8)),cell2mat(mld2use(ss,9))-cell2mat(mld2use(ss,10)),50,cell2mat(mld2use(ss,3)),'filled'), hold on
-scatter(cell2mat(mld2use(mm,7))-cell2mat(mld2use(mm,8)),cell2mat(mld2use(mm,9))-cell2mat(mld2use(mm,10)),50,cell2mat(mld2use(mm,3)),'filled')
-plot(cell2mat(mld2use(ss,7))-cell2mat(mld2use(ss,8)),cell2mat(mld2use(ss,9))-cell2mat(mld2use(ss,10)),'ro'), hold on
-plot(cell2mat(mld2use(mm,7))-cell2mat(mld2use(mm,8)),cell2mat(mld2use(mm,9))-cell2mat(mld2use(mm,10)),'bo')
+X=cell2mat(mld2use(:,13))-cell2mat(mld2use(:,9)); %density difference
+Y=cell2mat(mld2use(:,3));
+nn=find(~isnan(X) & ~isnan(Y)); X=X(nn); Y=Y(nn);
+[xmin,resnorm,residual] = lsqnonlin(@(theta) lsq_lightcurve(theta,X,log10(Y)),[-2 0.01],[-10 -100],[10 1000]);
+
+%%
+Y_hat=xmin(1)+(1-exp(xmin(2)*sort(X)));
+%Y_hat=xmin(1)*(1-exp(-xmin(2)*sort(X)));
+%Y_hat=xmin(1)*(1-exp((xmin(2)./sort(X))));
+plot(sort(X),Y_hat,'r-')
+
+% 
+% subplot(2,2,3,'replace')
+% plot(cell2mat(mld2use(:,8))-cell2mat(mld2use(:,12)),cell2mat(mld2use(:,7)),'.')
+% xlabel('Temperature difference between 4m and 12m (\circC)')
+% ylabel('Brunt Vaisala Frequency at 4m')
+
+
+
+%%
+figure
+scatter(cell2mat(mld2use(ss,8))-cell2mat(mld2use(ss,12)),cell2mat(mld2use(ss,9))-cell2mat(mld2use(ss,13)),50,cell2mat(mld2use(ss,3)),'filled'), hold on
+scatter(cell2mat(mld2use(mm,8))-cell2mat(mld2use(mm,12)),cell2mat(mld2use(mm,9))-cell2mat(mld2use(mm,13)),50,cell2mat(mld2use(mm,3)),'filled')
+plot(cell2mat(mld2use(ss,8))-cell2mat(mld2use(ss,12)),cell2mat(mld2use(ss,9))-cell2mat(mld2use(ss,13)),'ro'), hold on
+plot(cell2mat(mld2use(mm,8))-cell2mat(mld2use(mm,12)),cell2mat(mld2use(mm,9))-cell2mat(mld2use(mm,13)),'bo')
+caxis([0 0.005])
 colorbar
 
 %%
-clf
-plot(cell2mat(mld2use(mm,9))-cell2mat(mld2use(mm,10)),cell2mat(mld2use(mm,3)),'bo')
+figure
+subplot(1,2,1,'replace')
+plot(cell2mat(mld2use(mm,9))-cell2mat(mld2use(mm,13)),cell2mat(mld2use(mm,3)),'bo')
 hold on
-plot(cell2mat(mld2use(ss,9))-cell2mat(mld2use(ss,10)),cell2mat(mld2use(ss,3)),'ro')
+plot(cell2mat(mld2use(ss,9))-cell2mat(mld2use(ss,13)),cell2mat(mld2use(ss,3)),'ro')
 xlabel('Density difference between 4m and 12m')
 ylabel('Max N2 somewhere along water column')
+ylim([0 0.012])
+
+subplot(1,2,2,'replace')
+plot(cell2mat(mld2use(mm,8))-cell2mat(mld2use(mm,12)),cell2mat(mld2use(mm,3)),'bo')
+hold on
+plot(cell2mat(mld2use(ss,8))-cell2mat(mld2use(ss,12)),cell2mat(mld2use(ss,3)),'ro')
+xlabel('Density difference between 4m and 12m')
+ylabel('Max N2 somewhere along water column')
+ylim([0 0.012])
 
 
 %% OLDER MATERIAL BEFORE JULY 2017:
