@@ -25,7 +25,7 @@ datafolders = foldernames(cellfun('isempty',temp)==0);
 %%
 cast_record=[];
 
-for foldernum=[2:3 5:10 12 14:16 18:20];
+for foldernum=[2:3 5:10 12 14:16 18:20]; %are these the ones with lat/lon?
 
     %find dat data!
     matsource=fullfile(sourcepath,datafolders{foldernum},'/mat_outfiles/');
@@ -354,22 +354,3 @@ set(gca,'xscale','log')
 text(0.5,0.45,['Tower data: ' num2str(X1(1)) '+x^{' num2str(X1(2)) '}'],'color',[0 0.5 1])
 text(0.5,0.42,['All data: ' num2str(X2(1)) '+x^{' num2str(X2(2)) '}'])
 text(0.5,0.40,'Morel 1988: 0.121+x^{0.428}','color',[0.4 0.4 0.4])
-
-
-
-
-
-
-%% wavelength plots
-
-%find measured wavelengths:
-%regexp('ED(348.76)','ED\((?<lambda>\d{3}\.\d{2})\)','names')
-temp=regexp(edl_hdr(:,1),'\d{3}\.\d{2}','match');
-ind=find(cellfun('isempty',temp)==0);
-temp=temp(ind);
-temp=[temp{:}]';
-lambdas=cellfun(@(x) str2num(x),temp);
-
-%extract just light measurments:
-wv=cell2mat(edl(:,5:end-10));
-

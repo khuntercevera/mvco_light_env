@@ -15,7 +15,7 @@ plot_flag=1;
 
 %If have not made this yet:
 %raw_data_log={};
-load temp_datalog.mat
+load(fullfile('\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\','temp_datalog.mat'))
 
 mastersourcepath=fullfile('\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\raw_data\'); % path to folders with raw data...
 
@@ -287,6 +287,19 @@ for foldernum = 1:length(datafolders)
                 if tempstruc(filenum).pressure_tare < 8
                     fprintf('Is this the right pressure tare? %2.3f',tempstruc(filenum).pressure_tare)
                     keyboard
+                    %If indeed you find yourself here, what I did if there
+                    %was no pressure tare, was to look at the pressures
+                    %with record number and you should be able to see when
+                    %it was bobbing at the surface. I just took an average
+                    %of this as the pressure tare:
+                    %figure, plot(mpr_data{:,7})
+                    %set(gca,'YDir','reverse')
+                    
+                    %for 2008-255-183514.raw, this became:
+                    %tempstruc(filenum).pressure_tare=nanmean(mpr_data{:,7}(2960:3060))
+                    
+                    %for 2007-346-191403.raw, 2008-267-163905.raw, 2009-116-214302.raw, 2009-116-214414.raw  these aren't a cast so just used:
+                    %tempstruc(filenum).pressure_tare=min(mpr_data{:,7})
                 end
                 
                 pressure_tare=tempstruc(filenum).pressure_tare; %for use later on in teh script
@@ -549,7 +562,9 @@ for foldernum = 1:length(datafolders)
             tempstruc(filenum).mprtime=mpr_mattime;
             tempstruc(filenum).solarflag=solarstd_flag;
             tempstruc(filenum).depth=depth;
-
+            tempstruc(filenum).wavelen_solarst=lambdas_solarstd;
+            tempstruc(filenum).wavelen_downwell=lambdas_downwell;
+            
         else
             tempstruc(filenum).emptyflag = 1;
             %raw_data_log=[raw_data_log; [{datafolders{foldernum}} {sourcefiles(filenum).name} {'no data for at least one of the files'} {''}] ];
