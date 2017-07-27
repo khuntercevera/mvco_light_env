@@ -3,6 +3,7 @@
 
 %for calculating potential density (pressure affect removed):
 addpath /Users/kristenhunter-cevera/MVCO_light_at_depth/seawater_ver3_2/
+addpath /Users/kristenhunter-cevera/Documents/MATLAB/mvco_tools/
 mld2={};
 plotflag=1;
 warning off
@@ -103,6 +104,7 @@ for q=90:length(mvco_ind);
             %calculate N2 from binned data:
             N2D=sw_bfrq(binned_dataD(:,3),binned_dataD(:,4),binned_dataD(:,5));
             N2U=sw_bfrq(binned_dataU(:,3),binned_dataU(:,4),binned_dataU(:,5));
+            %sw_bfrq(sal (psu), temperature (deg C), pressure (db))
             %we need to see what the max N2 is, and what N2 is at 4m...
             
             %If salinity data doesn't really match on the upcast, then exclude this in the downcast:
@@ -242,81 +244,105 @@ end %for loop
 
 %first remove empty rows where something went awry:
 mld=mld2;
-ii=find(cellfun('isempty',mld(:,7))==0 & cellfun('isempty',mld(:,8))==0 & cellfun('isempty',mld(:,9))==0 & cellfun('isempty',mld(:,10))==0);
+%ii=find(cellfun('isempty',mld(:,7))==0 & cellfun('isempty',mld(:,8))==0 & cellfun('isempty',mld(:,9))==0 & cellfun('isempty',mld(:,10))==0);
+ii=find(abs(cell2mat(mld(:,10))-12) < 1);
 
 %%
 mld2use=mld(ii,:);
-ss=find(cellfun('isempty',regexp(mld2use(:,5),'stratified'))==0);
-mm=find(cellfun('isempty',regexp(mld2use(:,5),'stratified'))==1);
+% ss=find(cellfun('isempty',regexp(mld2use(:,5),'stratified'))==0);
+% mm=find(cellfun('isempty',regexp(mld2use(:,5),'stratified'))==1);
+
+ss=find(cell2mat(mld2use(:,3)) >= 1e-4);
+mm=find(cell2mat(mld2use(:,3)) < 1e-4);
+
+
 %% diff in temp vs. diff in dens
+
 clf
+% subplot(2,4,1,'replace')
+% plot(cell2mat(mld2use(ss,2)),cell2mat(mld2use(ss,3)),'r.','markersize',12), hold on
+% plot(cell2mat(mld2use(mm,2)),cell2mat(mld2use(mm,3)),'b.','markersize',12)
+% ylabel('Max N2 (s^{-2})')
+% line(xlim,[3e-4 3e-4],'color',[0.5 0.5 0.5])
+% datetick
+
+subplot(2,4,1,'replace')
+plot(find_yearday(cell2mat(mld2use(ss,2))),cell2mat(mld2use(ss,3)),'r.','markersize',12), hold on
+plot(find_yearday(cell2mat(mld2use(mm,2))),cell2mat(mld2use(mm,3)),'b.','markersize',12)
+ylabel('Max N2 (s^{-2})')
+line(xlim,[3e-4 3e-4],'color',[0.5 0.5 0.5])
+
+subplot(2,4,2,'replace')
+plot(cell2mat(mld2use(ss,2)),cell2mat(mld2use(ss,9))-cell2mat(mld2use(ss,13)),'r.','markersize',12), hold on
+plot(cell2mat(mld2use(mm,2))-cell2mat(mld2use(mm,12)),cell2mat(mld2use(mm,9))-cell2mat(mld2use(mm,13)),'b.','markersize',12)
+ylabel('Density difference between 4m and 12m (\circC)')
+datetick
+
+subplot(2,4,3,'replace')
+plot(cell2mat(mld2use(ss,9))-cell2mat(mld2use(ss,13)),cell2mat(mld2use(ss,3)),'r.','markersize',12), hold on
+plot(cell2mat(mld2use(mm,9))-cell2mat(mld2use(mm,13)),cell2mat(mld2use(mm,3)),'b.','markersize',12)
+xlabel('Density difference between 4m and 12m (\circC)')
+ylabel('Max N2 (s^{-2})')
+
+subplot(2,4,4,'replace')
+plot(cell2mat(mld2use(ss,3)),cell2mat(mld2use(ss,4)),'r.','markersize',12), hold on
+plot(cell2mat(mld2use(mm,3)),cell2mat(mld2use(mm,4)),'b.','markersize',12)
+xlabel('Max N2 (s^{-2})')
+ylabel('Depth of max N2 (m)')
+set(gca,'Ydir','reverse')
+
+subplot(2,4,5,'replace')
+plot(cell2mat(mld2use(ss,8))-cell2mat(mld2use(ss,12)),cell2mat(mld2use(ss,3)),'r.','markersize',12), hold on
+plot(cell2mat(mld2use(mm,8))-cell2mat(mld2use(mm,12)),cell2mat(mld2use(mm,3)),'b.','markersize',12)
+xlabel('Temperature difference between 4m and 12m (\circC)')
+ylabel('Max N2 (s^{-2})')
+
+subplot(2,4,6,'replace')
 plot(cell2mat(mld2use(ss,8))-cell2mat(mld2use(ss,12)),cell2mat(mld2use(ss,9))-cell2mat(mld2use(ss,13)),'r.','markersize',12), hold on
 plot(cell2mat(mld2use(mm,8))-cell2mat(mld2use(mm,12)),cell2mat(mld2use(mm,9))-cell2mat(mld2use(mm,13)),'b.','markersize',12)
-
 xlabel('Temperature difference between 4m and 12m (\circC)')
 ylabel('Density difference between 4m and 12m (\circC)')
 
+legend('N2 >= 3e-4', 'N2 < 3e-4')
+%%
+subplot(2,4,7,'replace')
+scatter(cell2mat(mld2use(:,8))-cell2mat(mld2use(:,12)),cell2mat(mld2use(:,9))-cell2mat(mld2use(:,13)),40,find_yearday(cell2mat(mld2use(:,2))),'filled')
+xlabel('Temperature difference between 4m and 12m (\circC)')
+ylabel('Density difference between 4m and 12m (\circC)')
+
+colormap(jet)
+colorbar
 %in general this is a tight relationship, and gives confidence to use temp
 %diff as a proxy for density diff
+
+%%
 
 %but the real question is how does density (or temp diff) for that matter
 %correlate to actual stratification?
 
-%% MUST PLOT TEMP DIFF AGAINST N2!!!!
-subplot(2,2,1,'replace')
-plot(cell2mat(mld2use(:,8))-cell2mat(mld2use(:,12)),cell2mat(mld2use(:,3)),'.')
-xlabel('Temperature difference between 4m and 12m (\circC)')
-ylabel('Max Brunt Vaisala Frequency')
-
-subplot(2,2,2,'replace'), hold on
-plot(cell2mat(mld2use(:,13))-cell2mat(mld2use(:,9)),(cell2mat(mld2use(:,3))),'.')
-xlabel('Density difference between 4m and 12m (kg/m^{3})')
-ylabel('Max Brunt Vaisala Frequency')
-line(xlim,[3e-4 3e-4],'color',[0.5 0.5 0.5])
 %Brunt Vaisala freq does show a nice correlation with density difference
 X=cell2mat(mld2use(:,13))-cell2mat(mld2use(:,9));
 Y=cell2mat(mld2use(:,3));
+nn=find(~isnan(X) & ~isnan(Y)); X=X(nn); Y=Y(nn);
 [B,BINT,~,~,STATS] = regress(Y,[ones(size(X)) X]); 
 plot(sort(X),B(1)+B(2)*sort(X),'r-')
 
-subplot(2,2,3,'replace'), hold on
-plot(cell2mat(mld2use(:,12))-cell2mat(mld2use(:,8)),(cell2mat(mld2use(:,3))),'.')
-xlabel('Temperature difference between 4m and 12m (kg/m^{3})')
-ylabel('Max Brunt Vaisala Frequency')
-set(gca,'yscale','log')
-line(xlim,[3e-4 3e-4],'color',[0.5 0.5 0.5])
 %Brunt Vaisala freq does show a nice correlation with density difference,
 %but even more beautiful relationship as log!
-
-
-%%
-figure
-subplot(2,2,4,'replace'), 
-%
-figure, hold on
-plot(cell2mat(mld2use(:,13))-cell2mat(mld2use(:,9)),log10((cell2mat(mld2use(:,3)))),'.')
-xlabel('Density difference between 4m and 12m (kg/m^{3})')
-ylabel('Max Brunt Vaisala Frequency')
-%set(gca,'yscale','log','box','on')
-line(xlim,log10([3e-4 3e-4]),'color',[0.5 0.5 0.5])
-%Brunt Vaisala freq does show a nice correlation with density difference
-
 X=cell2mat(mld2use(:,13))-cell2mat(mld2use(:,9)); %density difference
 Y=cell2mat(mld2use(:,3));
 nn=find(~isnan(X) & ~isnan(Y)); X=X(nn); Y=Y(nn);
-[xmin,resnorm,residual] = lsqnonlin(@(theta) lsq_lightcurve(theta,X,log10(Y)),[-2 0.01],[-10 -100],[10 1000]);
+[xmin,resnorm,residual] = lsqnonlin(@(theta) lsq_lightcurve(theta,X,Y),[-2 0.01],[-10 -100],[10 1000]);
 
 %%
-Y_hat=xmin(1)+(1-exp(xmin(2)*sort(X)));
+Y_hat=xmin(1)*(1-exp(xmin(2)*sort(X)));
 %Y_hat=xmin(1)*(1-exp(-xmin(2)*sort(X)));
 %Y_hat=xmin(1)*(1-exp((xmin(2)./sort(X))));
 plot(sort(X),Y_hat,'r-')
 
-% 
-% subplot(2,2,3,'replace')
-% plot(cell2mat(mld2use(:,8))-cell2mat(mld2use(:,12)),cell2mat(mld2use(:,7)),'.')
-% xlabel('Temperature difference between 4m and 12m (\circC)')
-% ylabel('Brunt Vaisala Frequency at 4m')
+
+
+
 
 
 
