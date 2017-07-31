@@ -9,19 +9,27 @@
 %addpath /Users/kristenhunter-cevera/Documents/MATLAB/mvco_tools/
 
 clear all;
-close all;
 close all; %for any open files
-plot_flag=1;
 
-%If have not made this yet:
-%raw_data_log={};
-load(fullfile('\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\','temp_datalog.mat'))
+plot_flag=1;
+do_satcon=1; %if do not need to run satcon and want to only work wth preprocessed txt files, set to 0
+
+%Load in initial screeing comments, if haven't made this file yet, script will ask you to screen now:
+try
+    load(fullfile('\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\','initial_data_notes2.mat'))
+    comment_flag=0; %notes/comments have been made and loaded
+catch
+    fprintf(['Hmmm...looks like there are not any initial comments on the data...\n Initiating plots for screening and entering comments\n'])
+    data_notes={};
+    data_note_titles={'date' 'file name' 'data present' 'if file has data, comment on data'};
+    comment_flag=1; %need to make comments on data
+    plot_flag=1; %Automatically changed it
+end
 
 mastersourcepath=fullfile('\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\raw_data\'); % path to folders with raw data...
-
 %mastersourcepath=fullfile(pwd);%'/Volumes/Lab_data/SummerStudents/2013_Marco/MVCO_hyperpro'; %top level directory
-%mastersourcepath=fullfile('/Users/kristenhunter-cevera/Desktop/forKristin');
 masteroutpath=fullfile('\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\','processed_radiometer_files'); %where you'd like final folders to be stored
+
 %calfiledir = fullfile(pwd, 'calibration_files'); %where the calibration files are located
 calfiledir = fullfile('\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\', 'calibration_files\CD_Nov2008\Calibration_Files\');
 
@@ -36,9 +44,8 @@ temp=regexp(foldernames,'\d{1,2}\w{3,4}20\d{2}'); %find all folders with this na
 datafolders = foldernames(cellfun('isempty',temp)==0);
 
 %HAVE NOT INCORPORATED THIS YET, BUT MAY BE NICE:
-% a choice of processing options:
-% save_txtfiles=1; %if want to save the intermediate txt files that are generated from satcon
-% do_satcon=1; %if do not need to run satcon and want to only work wth preprocessed txt files
+% save_txtfiles=1; %if do or do not want to save the intermediate txt files
+% that are generated from satcon, need at least a temporary one though to reload into matlab!
 
 %%
 %Now for each folder, go through and process the .raw files
@@ -116,7 +123,7 @@ for foldernum = 1:length(datafolders)
     %/OverWrite=yes: overwrite existing files if present
     %/EW (EndWindow): Close conversion progress window after completed conversion
     %/CL (Conversion log)=nul: do not maintain a conversion log
-    %
+    
     numfiles = length(sourcefiles);
     
     for filenum = 1:numfiles
@@ -173,17 +180,14 @@ for foldernum = 1:length(datafolders)
             
             % need to satcon these data into temp files -----------------------------------------------------------
             %fnamestr = ['"C:\Program Files (x86)\Satlantic\SatCon\SatCon.exe" ' infile ' ' txtfile ' ' calfilestr];
-            fnamestr = ['"C:\Program Files (x86)\Satlantic\SatCon\SatCon.exe" ' infile ' ' txtfile ' ' calfilestr];
-            cmdstr = [fnamestr satconswitches];
-            [s,w] = system(cmdstr);
-            %             %-------------------------------------------------------------------------------------------------------
-            % As of 9/22, these strings were working from the sosiknas1
-            % hyperpro directory....I'm wondering if it's just not a file
-            % issue.....rather than a string issue?
+            if do_satcon==1
+                fnamestr = ['"C:\Program Files (x86)\Satlantic\SatCon\SatCon.exe" ' infile ' ' txtfile ' ' calfilestr];
+                cmdstr = [fnamestr satconswitches];
+                [s,w] = system(cmdstr);
+            end
             
-            %             calfilestr ='\\sosiknas1\Lab_data\MVCO\HyperPro_Radiometer\calibration_files\CD_Nov2008\Calibration_Files\HPE284c.cal';
-            %             infile='\\sosiknas1\Lab_data\MVCO\HyperPro_Radiometer\11Oct2007\2007-284-182304.raw';
-            %             txtfile='\\sosiknas1\Lab_data\MVCO\HyperPro_Radiometer\text.txt';
+            
+            % ----------------REIMPORT DATA FROM TXT FILES ----------------------------------------------------
             
             %Once have made the txt files, reimport to matlab to save as .mat files:
             fprintf('reading in %s data\n', varstub);
@@ -261,13 +265,14 @@ for foldernum = 1:length(datafolders)
                 delimiter = ' ';
                 endRow = 19;
                 formatSpec = '%q%q%q%q%q%q%q%[^\n\r]'; %'%q%q%q%q%q%f%q%[^\n\r]';
-
+                
                 fileID = fopen(infile,'r');
                 dataArray = textscan(fileID, formatSpec, endRow, 'Delimiter', delimiter, 'MultipleDelimsAsOne', true, 'EmptyValue' ,NaN,'ReturnOnError', false);
                 fclose(fileID);
-
+                
                 dataArray(6) = cellfun(@(x) num2cell(x), dataArray(6), 'UniformOutput', false);
                 satfile_hdr = [dataArray{1:end-1}];
+                
                 % Clear temporary variables
                 clearvars delimiter endRow formatSpec fileID dataArray ans
                 
@@ -283,7 +288,9 @@ for foldernum = 1:length(datafolders)
                     keyboard
                 end
                 
+                %PRESSURE TARE - this is recorder in a header region of each .raw file:
                 tempstruc(filenum).pressure_tare=str2num(satfile_hdr{11,2});
+                
                 if tempstruc(filenum).pressure_tare < 8
                     fprintf('Is this the right pressure tare? %2.3f',tempstruc(filenum).pressure_tare)
                     keyboard
@@ -304,29 +311,9 @@ for foldernum = 1:length(datafolders)
                 
                 pressure_tare=tempstruc(filenum).pressure_tare; %for use later on in teh script
                 
-            end
-                %PRESSURE TARE - this is recorder in a header region of each .raw file:
-                %--------------------------------------------------------------------------------
-%                 delimiter = ' ';
-%                 startRow = 11;
-%                 endRow = 11;
-%                 % Format string for each line of text:
-%                 %   column1: text (%s)
-%                 %	column2: text (%s)
-%                 formatSpec = '%s%s%*s%*s%*s%*s%*s%*s%*s%*s%[^\n\r]';
-%                 fileID = fopen(infile,'r');
-%                 textscan(fileID, '%[^\n\r]', startRow-1, 'ReturnOnError', false);
-%                 dataArray = textscan(fileID, formatSpec, endRow-startRow+1, 'Delimiter', delimiter, 'MultipleDelimsAsOne', true, 'ReturnOnError', false);
-%                 fclose(fileID);
-%                 
-%                 pressure_tare = [dataArray{1:end-1}];
-%                 pressure_tare=str2num(pressure_tare{2}); %+ distance back up to downwelling sensor??
-%                 
-%                 clearvars filename delimiter startRow endRow formatSpec fileID dataArray
-%             end
-                      
-                        
-        end; % of ftype
+            end %if ftype==1
+            
+        end; % of ftype, and all available variables should be loaded in
         
         %
         %PHASE 2 - CLEANING UP AND PROCESSING OF DATA:
@@ -456,8 +443,8 @@ for foldernum = 1:length(datafolders)
             
             depth=mpr_data{:,7}-pressure_tare;
             fprintf('Pressure tare: %2.2f         min deth: %2.2f max deth: %2.2f \n',pressure_tare,min(depth),max(depth));
-                              
-            if plot_flag==1
+            
+            if plot_flag==1 || comment_flag==1
                 
                 clf
                 % SANITY CHECK PLOTS:
@@ -497,9 +484,9 @@ for foldernum = 1:length(datafolders)
                 
                 subplot(2,3,5,'replace'), hold on
                 plot(mpr_mattime,depth,'.-')
-%                 if ~isempty(zz)
-%                     plot(mpr_mattime(downcast_ind),tdepth(downcast_ind),'.-')
-%                 end
+                %                 if ~isempty(zz)
+                %                     plot(mpr_mattime(downcast_ind),tdepth(downcast_ind),'.-')
+                %                 end
                 set(gca,'Ydir','reverse')
                 ylabel('Depth (m)')
                 xlim([min(mpr_mattime) max(mpr_mattime)])
@@ -510,9 +497,9 @@ for foldernum = 1:length(datafolders)
                 subplot(2,3,3,'replace'), hold on
                 plot(edl_PAR,depth(mpr2edl),'.')
                 plot(esl_PAR,depth(mpr2esl),'g.')
-%                 if ~isempty(zz)
-%                     plot(edl_PAR(startcast:returncast),par_depths(startcast:returncast),'r.')
-%                 end
+                %                 if ~isempty(zz)
+                %                     plot(edl_PAR(startcast:returncast),par_depths(startcast:returncast),'r.')
+                %                 end
                 set(gca,'YDir','reverse')
                 ylabel('Depth (m)')
                 xlabel('PAR (\mumol/m^{2}/s)')
@@ -523,29 +510,39 @@ for foldernum = 1:length(datafolders)
                 subplot(2,3,6,'replace'), hold on
                 plot(log(edl_PAR),depth(mpr2edl),'.'), set(gca,'Ydir','reverse')
                 hold on
-              % plot(log(edl_PAR(startcast:returncast)),par_depths(startcast:returncast),'.-')
-              % plot(K(1)+K(2)*par_depths,par_depths,'-')
+                % plot(log(edl_PAR(startcast:returncast)),par_depths(startcast:returncast),'.-')
+                % plot(K(1)+K(2)*par_depths,par_depths,'-')
                 
                 xlabel('log(PAR) (\mumol/m^{2}/s)')
                 ylabel('Depth (m)')
-              %  title(['Attenuation coefficient check: ' num2str(K(2))])
-              %  legend('Downwelling PAR','Downcast PAR','polynomial fit','location','northwest')
-               
+                %  title(['Attenuation coefficient check: ' num2str(K(2))])
+                %  legend('Downwelling PAR','Downcast PAR','polynomial fit','location','northwest')
+                
             end %plot_flag
             
             %keyboard
             
             %if have not already made this log:
-%             data_comment = input('Good data? Enter a comment for future use :)\n');           
-%             raw_data_log=[raw_data_log; [{datafolders{foldernum}} {sourcefiles(filenum).name} {'data present'} {data_comment}] ];
-%             
-            ii=find(strcmp(filename, raw_data_log(:,2))==1);
-            
-            if strcmp(raw_data_log{ii,4},'not a cast')   
-                tempstruc(filenum).emptyflag = 2;
-            else %good casts
-                tempstruc(filenum).emptyflag = 0;
-            end
+            if comment_flag==1
+                data_comment = input('Good data? Enter a comment for future use :)\n');
+                data_notes=[data_notes; [{datafolders{foldernum}} {sourcefiles(filenum).name} {'data present'} {data_comment}] ];
+                
+                if strcmp(data_comment,'not a cast')
+                    tempstruc(filenum).emptyflag = 2;
+                else %good casts
+                    tempstruc(filenum).emptyflag = 0;
+                end
+                
+            else
+                ii=find(strcmp(filename, raw_data_log(:,2))==1);
+                
+                if strcmp(raw_data_log{ii,4},'not a cast')
+                    tempstruc(filenum).emptyflag = 2;
+                else %good casts
+                    tempstruc(filenum).emptyflag = 0;
+                end
+                
+            end %end of comment_flag
             
             %SAVE THAT DATA!
             %--------------------------------------------------------------------------------------------------
@@ -567,15 +564,21 @@ for foldernum = 1:length(datafolders)
             
         else
             tempstruc(filenum).emptyflag = 1;
-            %raw_data_log=[raw_data_log; [{datafolders{foldernum}} {sourcefiles(filenum).name} {'no data for at least one of the files'} {''}] ];
-        
-        end %empty_flag
+            if comment_flag==1
+                data_notes=[data_notes; [{datafolders{foldernum}} {sourcefiles(filenum).name} {'no data for at least one of the files'} {''}] ];
+            end
+        end % empty_flag
         
         clearvars -except numfiles sourcefiles matoutdir txtoutdir numfiles mastersourcepath masteroutpath calfiledir datafolders filenum tempstruc foldernum tempdatasource plot_flag raw_data_log
-        %
-    end;   % of filenum   
-    %
+        
+    end;   % of filenum
+    
     eval(['data_' datafolders{foldernum} '=tempstruc;'])
-    clear tempstruc
     eval(['save ' matoutdir '\data_' datafolders{foldernum} '.mat ' 'data_' datafolders{foldernum}])
+    clear tempstruc
+    
 end;  %of foldernum
+
+if comment_flag==1
+    save initial_data_notesB data_note_titles data_notes
+end
