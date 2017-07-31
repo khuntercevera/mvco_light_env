@@ -18,24 +18,22 @@ isub = [d(:).isdir]; %# returns logical vector
 foldernames = {d(isub).name}'; %names of folders
 temp=regexp(foldernames,'\d{1,2}\w{3,4}20\d{2}'); %find all folders with this naming scheme
 datafolders = foldernames(cellfun('isempty',temp)==0);
+%there should be (as of summer 2017) only 20 folders...
 
 %Load in a log about the data:
-load('/Volumes/Lab_data/MVCO/HyperPro_Radiometer/temp_datalog.mat')
-
+load(fullfile('\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\','initial_data_notes.mat'))
+ 
+%load in the list of good data folders:
+load(fullfile('\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\','good_data_folders.mat')) 
 %%
 %can just manually enter in a foldernum for now .... put into a for loop later....
-foldernum=20;
+foldernum=good_data(1);
 
-%find dat data!
+%find the data!
 matsource=fullfile(sourcepath,datafolders{foldernum},'/mat_outfiles/');
 
 %where to save:
 savepath=fullfile(matsource,'mat_outfiles/'); %this directory should already exist!
-
-%now go through each file:
-%check the log to see if good casts are present
-%if so, go ahead and calculate k
-%save data in a structure format?
 
 eval(['load ' matsource 'data_' datafolders{foldernum} '.mat'])
 eval(['tempdata=data_' datafolders{foldernum} ';'])
@@ -43,18 +41,16 @@ eval(['sourcefiles = {data_' datafolders{foldernum} '.file};']) %the files in th
 numfiles=length(sourcefiles);
 
 % first an overview plot:
-figure(99), clf, hold on
-if isfield(tempdata, 'mprtime')
-    for filenum=1:numfiles
-        plot(tempdata(filenum).mprtime, tempdata(filenum).depth,'.-')
-    end
-    set(gca,'Ydir','reverse')
-    datetick
-else
-    disp('Only empty files for this folder...')
+figure(1), clf, hold on
+
+eval(['load ' matsource 'location_' datafolders{foldernum} '.mat'])
+eval(['location=location_' datafolders{foldernum} ';'])
+for filenum=1:numfiles
+    plot(tempdata(filenum).mprtime, tempdata(filenum).depth,'.-')
 end
-%dipslay lat/lon:
-['lat:' {tempdata.lat}; 'lon:' {tempdata.lon}]
+set(gca,'Ydir','reverse')
+datetick
+
 
 %% Okay, if that looks reasonable, then move onto attenuation calculations!
 
@@ -62,14 +58,15 @@ end
 for filenum=1:numfiles
     
     filename=sourcefiles{filenum};
-    %check if good casts?
-    ii=find(cellfun('isempty',strfind(raw_data_log(:,2),filename(1:end-4)))==0); %find the file
+    ii=find(cellfun('isempty',strfind(data_notes(:,2),filename(1:end-4)))==0); %find the file
     
-    tt=regexpi(raw_data_log(ii,4),'not a cast');
-    if isempty(raw_data_log{ii,4}) || ~cellfun('isempty',(regexpi(raw_data_log(ii,4),'not a cast')))
+    %Is it a good cast?
+    if isempty(data_notes{ii,4}) || ~cellfun('isempty',(regexpi(data_notes(ii,4),'not a cast')))
+        
         disp(['File ' num2str(filenum) ' is an empty file or has no valid casts - skipping: ' filename])
         K_PAR(filenum).file=filename;
         K_PAR(filenum).NOTES='empty file / not a cast';
+    
     else
         disp(['Processing: file number: ' num2str(filenum) ' out of ' num2str(numfiles) ' | ' filename ' for attenuation coefficient'])
         
@@ -134,6 +131,7 @@ for filenum=1:numfiles
         K_PAR(filenum).K=K(2);
         K_PAR(filenum).NOTES=notes;
     end
+    
 end
 
 clear tempdata mprtime edl_ind edl_PAR depth
@@ -144,3 +142,39 @@ eval(['save ' matsource 'K_PAR_' datafolders{foldernum} '.mat K_PAR_' datafolder
 
 close all
 clear K_PAR
+
+
+%% Okay, and if you want to check the fits for a certain set of data:
+
+foldernum=good_data(1);
+load(fullfile(sourcepath,datafolders{foldernum},['/mat_outfiles/data_' datafolders{foldernum}]))
+eval(['tempdata=data_' datafolders{foldernum} ';'])
+load(fullfile(sourcepath,datafolders{foldernum},['/mat_outfiles/K_PAR_' datafolders{foldernum}]));
+eval(['K_PAR=K_PAR_' datafolders{foldernum} ';'])
+%%
+filenum=1; 
+
+depth=tempdata(filenum).depth;
+edl_ind=tempdata(filenum).edl_ind;
+edl_PAR=tempdata(filenum).edl_PAR;
+K=K_PAR(filenum).K;
+
+figure(filenum), set(gcf,'position',[33         468        1218         510])
+        subplot(1,2,1,'replace'), hold on
+        [ax h1 h2]=plotyy(tempdata(filenum).mprtime,depth,tempdata(filenum).mprtime(edl_ind),edl_PAR)
+        %plot(tempdata(filenum).mprtime(impr),depth(impr),'.-')
+        %plot(tempdata(filenum).mprtime(impr),0.1*edl_PAR(ipar)-20,'.-')
+        datetick(ax(2))
+        datetick(ax(1))
+        set(ax(1),'YDir','reverse')     
+        ylabel(ax(1),'Depth')
+        ylabel(ax(2),'PAR')
+
+        subplot(1,2,2,'replace')
+        plot(log(edl_PAR),depth(edl_ind),'.'), hold on
+        %plot(log(edl_PAR(ipar)),depth(impr),'.')
+        %plot(K(1)+K(2)*depth(impr),depth(impr),'-')
+         plot(K(1)+K(2)*depth,depth,'-')
+        set(gca,'YDir','reverse')
+        title(['File: ' num2str(filenum) ' ; ' filename])
+        text(2,4,['K: ' num2str(K(2))])

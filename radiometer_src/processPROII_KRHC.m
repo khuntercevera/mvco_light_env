@@ -16,7 +16,7 @@ do_satcon=1; %if do not need to run satcon and want to only work wth preprocesse
 
 %Load in initial screeing comments, if haven't made this file yet, script will ask you to screen now:
 try
-    load(fullfile('\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\','initial_data_notes2.mat'))
+    load(fullfile('\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\','initial_data_notes.mat'))
     comment_flag=0; %notes/comments have been made and loaded
 catch
     fprintf(['Hmmm...looks like there are not any initial comments on the data...\n Initiating plots for screening and entering comments\n'])
