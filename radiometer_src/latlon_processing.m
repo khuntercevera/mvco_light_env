@@ -50,39 +50,71 @@ mvco_depth=mvco_events{:,{'Water_Depth_m'}};
 
 %% This is a very manual process....
 
-for foldernum=good_data(5)' %files that have data in them!
+for foldernum=good_data(14)' %files that have data in them!
     %%
     matsource=fullfile(sourcepath,datafolders{foldernum},'/mat_outfiles/');
     
     eval(['load ' matsource 'data_' datafolders{foldernum} '.mat'])
     eval(['tempdata=data_' datafolders{foldernum} ';'])
     
-    %Okay, would like to take a look at the casts all together, with info from MVCO data...
-    if foldernum==7
-        disp('adjusting mprtime for these files')
+    %It turns out there are some discrepancies in UTC offset, timestamps
+    %and records. So far, these have been identified in:
+    %%
+    switch datafolders{foldernum}
+        case '12Aug2009'
+            hour_offset=-(1/24);
+            timestamp_offset=-(1/24);          
+        case '21Oct2009'
+            hour_offset=-(1/24);
+            timestamp_offset=-(1/24);
+        case '23Mar2011'
+             hour_offset=-(1/24);
+            timestamp_offset=-(1/24);
+        case '13Mar2008'
+            hour_offset=(1/24);
+            timestamp_offset=(1/24);
+        case '16Jan2008'
+            hour_offset=(1/24);
+            timestamp_offset=(1/24);
+        case '13Dec2007'
+            hour_offset=(1/24);
+            timestamp_offset=1+(1/24);
+        case '27Apr2009'
+            timestamp_offset=1-(1/24);
+            hour_offset=-(1/24);
+        otherwise
+            hour_offset=0;
+            timestamp_offset=0;   
+    end
+    
+    if hour_offset ~=0 || timestamp_offset~=0
         for filenum=1:length(tempdata)
-            tempdata(filenum).mprtime = tempdata(filenum).mprtime-(1/24); %suspected hour offset with UTC time
+            tempdata(filenum).mprtime = tempdata(filenum).mprtime+hour_offset; %suspected hour offset with UTC time
+            tempdata(filenum).timestamp = tempdata(filenum).timestamp+timestamp_offset;
         end
     end
     
+     ii=find(mvco_time==floor(tempdata(1).timestamp)); %find the dates that correspond
+     localt=datenum([repmat('1-0-03 ',length(ii),1) char(mvco_start_time(ii))])-datenum('1-0-03')+floor(tempdata(1).timestamp);
+    
+     
     figure(21), clf, hold on
     for filenum=1:length(tempdata)
         plot(tempdata(filenum).mprtime, tempdata(filenum).depth,'.-')
         %text(mean(tempdata(filenum).mprtime),-2,{(templat);(templon)})
     end
-    set(gca,'Ydir','reverse')
+    
+    plot(localt,mvco_depth(ii),'p','markersize',12)    
+    title(datafolders{foldernum})
+    set(gca,'Ydir','reverse','xlim',[min(localt(1),tempdata(1).timestamp) max(localt(end),tempdata(end).timestamp)],'xgrid','on','ygrid','on')
     datetick
     
-    ii=find(mvco_time==floor(tempdata(1).timestamp)); %find the dates that correspond
-    localt=datenum([repmat('1-0-03 ',length(ii),1) char(mvco_start_time(ii))])-datenum('1-0-03')+floor(tempdata(1).timestamp);
-    plot(localt,mvco_depth(ii),'p','markersize',12)
-    set(gca,'xlim',[min(localt(1),tempdata(1).timestamp) max(localt(end),tempdata(end).timestamp)],'xgrid','on','ygrid','on')
     %dsiplay for reference:
-    mvco_events(ii,{'Start_Date','Start_Time_UTC','Latitude','Longitude','Water_Depth_m'})
-    datetick
+    mvco_events(ii,{'Start_Date','Event_Number','Start_Time_UTC','Latitude','Longitude','Water_Depth_m'})
+    
     
     for q=1:length(tempdata)
-        %%
+        
         location(q).file = tempdata(q).file;
         
         if tempdata(q).emptyflag~=1
@@ -92,23 +124,27 @@ for foldernum=good_data(5)' %files that have data in them!
             templat=regexp(tempdata(q).lat,'(?<degree>\d{2})\s(?<decmin>\d*\.\d*)','names');
             
             %find closest mvco values with regard to time and cast:
-            [temp, itime]=sort(localt-tempdata(q).timestamp);
+            [~, itime_abs]=sort(abs(localt-tempdata(q).timestamp)); %absolute in time closest values
+            [temp, ~]=sort(localt-tempdata(q).timestamp); %sorted to find inbetween timepoints
             
             %maybe look for the cast right before and after radiometer cast:
             temp(temp<0)=0; temp(temp>0)=1;
             if ~any(temp==1) %meaning all zeros -> end of the day casts
-                itime=itime([length(temp) length(temp)-1]); 
+                itime=itime_abs(1:2);
+                %itime=itime([length(temp) length(temp)-1]); 
             elseif ~any(temp==0) %meaing all ones -> beginning of day casts
-                itime=itime(1:2);
+                itime=itime_abs(1:2);
             else
                 ww=find(diff(temp==1));
-                itime=itime(max(ww-1,1):min(ww+1,length(temp))); %for the cases where first and last cast
+                rr=(max(ww-1,1):min(ww+1,length(temp))); %range
+                %itime=itime(max(ww-1,1):min(ww+1,length(temp))); %for the cases where first and last cast
+                itime=intersect(itime_abs,rr','rows','stable');   
             end
             
             %[~, itime]=sort(abs(localt-tempdata(q).timestamp));
             
             max_depth=max(tempdata(q).depth);
-            idep=find(mvco_depth(ii)+0.25-max_depth > 0);
+            idep=find(mvco_depth(ii)+0.8-max_depth > 0);
             
             %only evaluate indices with depths that are valid:
             itime=intersect(itime,idep,'rows','stable');
@@ -169,19 +205,19 @@ for foldernum=good_data(5)' %files that have data in them!
                 mvcotemplat=mvco_lat(ii(itime(1)));
                 mvcotemplon=mvco_lon(ii(itime(1)));
                 
-                in=itime(1);
                 plot(localt(itime(1)),mvco_depth(ii(itime(1))),'p','markersize',12,'markerfacecolor','b')
-                
-                if    1
-                else
-                    disp(['hmmm...for ' num2str(q) ' out of: ' num2str(length(tempdata)) ' seem to have a problem finding the corresponding cast'])
-                    keyboard
-                end
+%                 
+%                 if    1
+%                 else
+%                     disp(['hmmm...for ' num2str(q) ' out of: ' num2str(length(tempdata)) ' seem to have a problem finding the corresponding cast'])
+%                     keyboard
+%                 end
                 
                 location(q).lat=mvcotemplat;
                 location(q).lon=mvcotemplon;
-                location(q).notes=['no lat/lon entered; using mvco event: ' mvco_event_num{ii(in)} ' lat/lon for position'];
-                disp(['for file: ' num2str(q) ' out of ' num2str(length(tempdata)) ' no lat/lon entered, using mvco record values'])
+                
+                location(q).notes=['no lat/lon entered; using mvco event: ' mvco_event_num{ii(itime(1))} ' lat/lon for position'];
+                disp(['for file: ' num2str(q) ' out of ' num2str(length(tempdata)) ' no lat/lon entered, using mvco record value: ' mvco_event_num{ii(itime(1))}])
                 
             end
             
