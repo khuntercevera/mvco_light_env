@@ -50,7 +50,7 @@ mvco_depth=mvco_events{:,{'Water_Depth_m'}};
 
 %% This is a very manual process....
 
-for foldernum=good_data(14)' %files that have data in them!
+for foldernum=good_data(15)' %files that have data in them!
     %%
     matsource=fullfile(sourcepath,datafolders{foldernum},'/mat_outfiles/');
     
@@ -59,7 +59,7 @@ for foldernum=good_data(14)' %files that have data in them!
     
     %It turns out there are some discrepancies in UTC offset, timestamps
     %and records. So far, these have been identified in:
-    %%
+ 
     switch datafolders{foldernum}
         case '12Aug2009'
             hour_offset=-(1/24);
@@ -80,24 +80,26 @@ for foldernum=good_data(14)' %files that have data in them!
             hour_offset=(1/24);
             timestamp_offset=1+(1/24);
         case '27Apr2009'
-            timestamp_offset=1-(1/24);
+            timestamp_offset=-(1/24);
+            hour_offset=-(1/24);
+        case '4June2009'
+            timestamp_offset=-(1/24);
             hour_offset=-(1/24);
         otherwise
             hour_offset=0;
             timestamp_offset=0;   
     end
-    
-    if hour_offset ~=0 || timestamp_offset~=0
+
+    if hour_offset~=0 || timestamp_offset~=0
         for filenum=1:length(tempdata)
             tempdata(filenum).mprtime = tempdata(filenum).mprtime+hour_offset; %suspected hour offset with UTC time
             tempdata(filenum).timestamp = tempdata(filenum).timestamp+timestamp_offset;
         end
     end
     
-     ii=find(mvco_time==floor(tempdata(1).timestamp)); %find the dates that correspond
-     localt=datenum([repmat('1-0-03 ',length(ii),1) char(mvco_start_time(ii))])-datenum('1-0-03')+floor(tempdata(1).timestamp);
-    
-     
+     ii=find(mvco_time==floor(tempdata(end).timestamp)); %find the dates that correspond
+     localt=datenum([repmat('1-0-03 ',length(ii),1) char(mvco_start_time(ii))])-datenum('1-0-03')+floor(tempdata(end).timestamp);
+        
     figure(21), clf, hold on
     for filenum=1:length(tempdata)
         plot(tempdata(filenum).mprtime, tempdata(filenum).depth,'.-')
@@ -111,7 +113,7 @@ for foldernum=good_data(14)' %files that have data in them!
     
     %dsiplay for reference:
     mvco_events(ii,{'Start_Date','Event_Number','Start_Time_UTC','Latitude','Longitude','Water_Depth_m'})
-    
+    %%
     
     for q=1:length(tempdata)
         
@@ -181,9 +183,9 @@ for foldernum=good_data(14)' %files that have data in them!
                     location(q).notes=['lat/lon from hdr used; matches event record values with closest record: ' mvco_event_num{ii(im)}];
                     disp(['for file: ' num2str(q) ' out of: ' num2str(length(tempdata)) ' lat/lon entered with good agreement between record values, with closest record: ' mvco_event_num{ii(im)}])
                 else
-                    disp(['for file: ' num2str(q) ' out of: ' num2str(length(tempdata)) ', not a good match between entered and record data'])
+                    disp(['for file: ' num2str(q) ' out of: ' num2str(length(tempdata)) ', not a good match between entered and record data: ' mvco_event_num{ii(im)}])
                     keyboard
-                    decision=input('Do you trust entered log lat/lon or recorded mvco lat/lon? Enter either: "MVCO" or "log"\n');
+                    decision=input('Do you trust entered log lat/lon or recorded mvco lat/lon? Enter either: "MVCO" or "log" or "other" to return to keyboard\n');
                                         
                     if strcmp(decision,'MVCO')
                         location(q).lat=mvcotemplat;
@@ -194,7 +196,8 @@ for foldernum=good_data(14)' %files that have data in them!
                         location(q).lat=templat;
                         location(q).lon=templon;
                         location(q).notes=['lat/lon entered does not match closest entry compared to mvco event records ' mvco_event_num{ii(im)} ', but using entered lat/lon for position'];
-                        
+                    elseif strcmp(decision,'other')
+                        keyboard
                     end
                      
                 end
@@ -206,13 +209,7 @@ for foldernum=good_data(14)' %files that have data in them!
                 mvcotemplon=mvco_lon(ii(itime(1)));
                 
                 plot(localt(itime(1)),mvco_depth(ii(itime(1))),'p','markersize',12,'markerfacecolor','b')
-%                 
-%                 if    1
-%                 else
-%                     disp(['hmmm...for ' num2str(q) ' out of: ' num2str(length(tempdata)) ' seem to have a problem finding the corresponding cast'])
-%                     keyboard
-%                 end
-                
+
                 location(q).lat=mvcotemplat;
                 location(q).lon=mvcotemplon;
                 
@@ -222,6 +219,7 @@ for foldernum=good_data(14)' %files that have data in them!
             end
             
         else %empty file
+            disp('empty file')
             location(q).lat=[];
             location(q).lon=[];
             location(q).notes='empty_file';
