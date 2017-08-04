@@ -36,8 +36,7 @@ end
 %to place lat/lon and station that goes along with each cast, use info in nutrient file:
 %load /Users/kristenhunter-cevera/Documents/MATLAB/MVCO_Syn_analysis/MVCO_environmental_data/nut_data_repsB.mat
 
-%trying out 'readtable' - can also be accomplished by textscan if using
-%older version of MATLAB:
+%trying out 'readtable' - can also be accomplished by textscan if using older version of MATLAB:
 mvco_events=readtable('/Users/kristenhunter-cevera/MVCO_light_at_depth/MVCO_event_log.txt'); %results in a table structure
 %see list of variables: mvco_events.Properties.VariableNames
 mvco_event_num=mvco_events{:,{'Event_Number'}};
@@ -50,8 +49,8 @@ mvco_depth=mvco_events{:,{'Water_Depth_m'}};
 
 %% This is a very manual process....
 
-for foldernum=good_data(15)' %files that have data in them!
-    %%
+for foldernum=good_data(15)' %files that have data in them! Go through one by one....
+    
     matsource=fullfile(sourcepath,datafolders{foldernum},'/mat_outfiles/');
     
     eval(['load ' matsource 'data_' datafolders{foldernum} '.mat'])
@@ -59,16 +58,16 @@ for foldernum=good_data(15)' %files that have data in them!
     
     %It turns out there are some discrepancies in UTC offset, timestamps
     %and records. So far, these have been identified in:
- 
+    
     switch datafolders{foldernum}
         case '12Aug2009'
             hour_offset=-(1/24);
-            timestamp_offset=-(1/24);          
+            timestamp_offset=-(1/24);
         case '21Oct2009'
             hour_offset=-(1/24);
             timestamp_offset=-(1/24);
         case '23Mar2011'
-             hour_offset=-(1/24);
+            hour_offset=-(1/24);
             timestamp_offset=-(1/24);
         case '13Mar2008'
             hour_offset=(1/24);
@@ -87,9 +86,9 @@ for foldernum=good_data(15)' %files that have data in them!
             hour_offset=-(1/24);
         otherwise
             hour_offset=0;
-            timestamp_offset=0;   
+            timestamp_offset=0;
     end
-
+    
     if hour_offset~=0 || timestamp_offset~=0
         for filenum=1:length(tempdata)
             tempdata(filenum).mprtime = tempdata(filenum).mprtime+hour_offset; %suspected hour offset with UTC time
@@ -97,23 +96,22 @@ for foldernum=good_data(15)' %files that have data in them!
         end
     end
     
-     ii=find(mvco_time==floor(tempdata(end).timestamp)); %find the dates that correspond
-     localt=datenum([repmat('1-0-03 ',length(ii),1) char(mvco_start_time(ii))])-datenum('1-0-03')+floor(tempdata(end).timestamp);
-        
+    ii=find(mvco_time==floor(tempdata(end).timestamp)); %find the dates that correspond
+    localt=datenum([repmat('1-0-03 ',length(ii),1) char(mvco_start_time(ii))])-datenum('1-0-03')+floor(tempdata(end).timestamp);
+    
     figure(21), clf, hold on
     for filenum=1:length(tempdata)
         plot(tempdata(filenum).mprtime, tempdata(filenum).depth,'.-')
         %text(mean(tempdata(filenum).mprtime),-2,{(templat);(templon)})
     end
     
-    plot(localt,mvco_depth(ii),'p','markersize',12)    
+    plot(localt,mvco_depth(ii),'p','markersize',12)
     title(datafolders{foldernum})
     set(gca,'Ydir','reverse','xlim',[min(localt(1),tempdata(1).timestamp) max(localt(end),tempdata(end).timestamp)],'xgrid','on','ygrid','on')
     datetick
     
     %dsiplay for reference:
     mvco_events(ii,{'Start_Date','Event_Number','Start_Time_UTC','Latitude','Longitude','Water_Depth_m'})
-    %%
     
     for q=1:length(tempdata)
         
@@ -133,14 +131,14 @@ for foldernum=good_data(15)' %files that have data in them!
             temp(temp<0)=0; temp(temp>0)=1;
             if ~any(temp==1) %meaning all zeros -> end of the day casts
                 itime=itime_abs(1:2);
-                %itime=itime([length(temp) length(temp)-1]); 
+                %itime=itime([length(temp) length(temp)-1]);
             elseif ~any(temp==0) %meaing all ones -> beginning of day casts
                 itime=itime_abs(1:2);
             else
                 ww=find(diff(temp==1));
                 rr=(max(ww-1,1):min(ww+1,length(temp))); %range
                 %itime=itime(max(ww-1,1):min(ww+1,length(temp))); %for the cases where first and last cast
-                itime=intersect(itime_abs,rr','rows','stable');   
+                itime=intersect(itime_abs,rr','rows','stable');
             end
             
             %[~, itime]=sort(abs(localt-tempdata(q).timestamp));
@@ -186,7 +184,7 @@ for foldernum=good_data(15)' %files that have data in them!
                     disp(['for file: ' num2str(q) ' out of: ' num2str(length(tempdata)) ', not a good match between entered and record data: ' mvco_event_num{ii(im)}])
                     keyboard
                     decision=input('Do you trust entered log lat/lon or recorded mvco lat/lon? Enter either: "MVCO" or "log" or "other" to return to keyboard\n');
-                                        
+                    
                     if strcmp(decision,'MVCO')
                         location(q).lat=mvcotemplat;
                         location(q).lon=mvcotemplon;
@@ -199,7 +197,7 @@ for foldernum=good_data(15)' %files that have data in them!
                     elseif strcmp(decision,'other')
                         keyboard
                     end
-                     
+                    
                 end
                 
             else %no entered lat/lon -> use data from MVCO event number:
@@ -209,7 +207,7 @@ for foldernum=good_data(15)' %files that have data in them!
                 mvcotemplon=mvco_lon(ii(itime(1)));
                 
                 plot(localt(itime(1)),mvco_depth(ii(itime(1))),'p','markersize',12,'markerfacecolor','b')
-
+                
                 location(q).lat=mvcotemplat;
                 location(q).lon=mvcotemplon;
                 
@@ -237,45 +235,61 @@ for foldernum=good_data(15)' %files that have data in them!
 end %foldernum
 
 
-%% for the ones that don't have lat/lon - entry manually...
+%% And now a quick plot to show where the data is!
 
-%23Sept2008  18 CANNOT FIND WHICH MVCO EVENTS WENT WITH THESE CASTS! - CHECK
-%THE SHIP LOGS! string of single casts, likely at just one station, but day was multi-station
 
-foldernum=19;
+%If need to reload data:
+location_mat=[]; location_rec={};
 
-matsource=fullfile(sourcepath,datafolders{foldernum},'/mat_outfiles/');
-eval(['load ' matsource 'data_' datafolders{foldernum} '.mat'])
-eval(['tempdata=data_' datafolders{foldernum} ';'])
-
-clf, hold on
-for filenum=1:length(tempdata)
-    plot(tempdata(filenum).mprtime, tempdata(filenum).depth,'.-')
-end
-set(gca,'Ydir','reverse')
-datetick
-
-%%
-rr=14;
-for j=rr
-    plot(tempdata(j).mprtime, tempdata(j).depth,'k.-')
+for foldernum=good_data'
+    
+    matsource=fullfile(sourcepath,datafolders{foldernum},'/mat_outfiles/');
+    eval(['load ' matsource 'location_' datafolders{foldernum} '.mat'])
+    eval(['location=location_' datafolders{foldernum} ';'])
+    
+    location_rec=[location_rec; repmat({datafolders{foldernum}},length(location),1) repmat({foldernum},length(location),1) {location(:).file}'  {location(:).notes}'];
+    location_mat=[location_mat; [cell2mat({location(:).lat}')  cell2mat({location(:).lon}')]];
+    
 end
 
-%%
-event='MVCO_206';
-ii=find(strcmp(event,MVCO_nut_reps(:,1))==1);
-station4nut(ii)
+jj=find(strcmp(location_rec(:,4),'empty_file')~=1);
+location_rec=location_rec(jj,:);
+
+%% and plot!
+
+clf
+plot(location_mat(:,2),location_mat(:,1),'.'), hold on
+
+%% hmmm, if some do look suspicious:
+[x y]=ginput;
+hold on
+plot(x,y,'r.')
+
+%% now let's find those points and see if want to adjust:
+
+q=6; %how many points you need to correct:
+plot(x(q),y(q),'kp','markersize',12)
+
+qq=find((1e-2)*floor(100*location_mat(:,2))==((1e-2)*floor(100*x(q))) & (1e-2)*floor(100*location_mat(:,1))==((1e-2)*floor(100*y(q))));
+
+disp([location_rec{qq,1:2} location_rec{qq,4}])
+
+foldername=location_rec{qq,1};
+eval(['templist={location_' foldername '(:).file}'';'])
+
+w=find(strcmp(templist,location_rec{qq,3})==1);
+
+mvconum=regexp(location_rec{qq,4},'MVCO_\d{3}','match');
+jj=find(strcmp(mvco_event_num,mvconum)==1);
 
 %%
-for q=rr
-    location(q).station = station4nut(ii(1));
-    location(q).lon = MVCO_nut_reps{ii(1),6};
-    location(q).lat = MVCO_nut_reps{ii(1),5};
-    location(q).file = tempdata(q).file;
-    location(q).notes= ['from event info ' event '; matched based on depth and event# order'];
-end
+eval(['location_' foldername  '(w).lat=mvco_lat(jj);'])
+eval(['location_' foldername '(w).lat=mvco_lat(jj);'])
+eval(['location_' foldername '(w).notes=''lat/lon entered but seems incorrect compared to log; using mvco event: ' mvconum{:} ' lat/lon for position'';'])
 
-%%
-eval(['location_' datafolders{foldernum} '=location;'])
+plot(mvco_lon(jj),mvco_lat(jj),'rp','markersize',12)
+
+%% If that looks good, can save:
+
 eval(['save ' matsource 'location_' datafolders{foldernum} ' location_' datafolders{foldernum}])
-clear location
+
