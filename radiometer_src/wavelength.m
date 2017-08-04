@@ -123,12 +123,12 @@ for foldernum=[2:3 5:10 12 14:16 18:20]; %are these the ones with lat/lon?
                 keyboard
             end
             
-        end
-        
-        
+        end  
     end
 end
 
+%What I'd also like to do is record a set of casts, and then plot these
+%against each other, color coded by time of year to identify any shifts??
 %% find the tower casts:
 
 box=[-70.7 -70.4 41.3 41.35];

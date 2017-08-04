@@ -62,7 +62,8 @@ plot(-70.567,41.145,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
 title('red=log, blue=mvco record')
 %% This is a very manual process....
 
-for foldernum=good_data(15)' %files that have data in them! Go through one by one....
+%already did 10, 19, 20
+for foldernum=good_data(1)' %files that have data in them! Go through one by one....
     
     matsource=fullfile(sourcepath,datafolders{foldernum},'/mat_outfiles/');
     
@@ -90,7 +91,7 @@ for foldernum=good_data(15)' %files that have data in them! Go through one by on
             timestamp_offset=(1/24);
         case '13Dec2007'
             hour_offset=(1/24);
-            timestamp_offset=1+(1/24);
+            timestamp_offset=(1/24);
         case '27Apr2009'
             timestamp_offset=-(1/24);
             hour_offset=-(1/24);
