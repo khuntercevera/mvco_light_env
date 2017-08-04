@@ -46,7 +46,20 @@ mvco_lat=mvco_events{:,{'Latitude'}};
 mvco_start_time=mvco_events{:,{'Start_Time_UTC'}};
 mvco_depth=mvco_events{:,{'Water_Depth_m'}};
 
+%% very helpful in this process is a map of the sampling stations and depths
+%that go along with each station:
+figure(6), clf, hold on
+%plot station points:
+plot(-70.567,41.325,'o','markersize',16,'color',[0.5 0.5 0.5]) %tower
+plot(-70.555,41.335,'o','markersize',16,'color',[0.5 0.5 0.5]) %node
+plot(-70.6275,41.325,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+plot(-70.505,41.325,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+plot(-70.45,41.3275,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+plot(-70.567,41.255,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+plot(-70.567,41.2,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+plot(-70.567,41.145,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
 
+title('red=log, blue=mvco record')
 %% This is a very manual process....
 
 for foldernum=good_data(15)' %files that have data in them! Go through one by one....
@@ -173,7 +186,13 @@ for foldernum=good_data(15)' %files that have data in them! Go through one by on
                 %THE MOST LIKELY CORRESPONDING CAST:
                 mvcotemplat=mvco_lat(ii(im));
                 mvcotemplon=mvco_lon(ii(im));
+                
+                figure(21)
                 plot(localt(im),mvco_depth(ii(im)),'p','markersize',12,'markerfacecolor','b')
+                
+                figure(6)
+                plot(mvcotemplon,mvcotemplat,'bp')
+                plot(templon,templat,'rp')
                 
                 if abs(mvcotemplat-templat) < 0.01 && abs(mvcotemplon-templon) < 0.01 %close enough!
                     location(q).lat=templat;
@@ -199,14 +218,18 @@ for foldernum=good_data(15)' %files that have data in them! Go through one by on
                     end
                     
                 end
-                
+       
             else %no entered lat/lon -> use data from MVCO event number:
                 
                 %THE MOST LIKELY CORRESPONDING CAST:
                 mvcotemplat=mvco_lat(ii(itime(1)));
                 mvcotemplon=mvco_lon(ii(itime(1)));
                 
+                figure(21)
                 plot(localt(itime(1)),mvco_depth(ii(itime(1))),'p','markersize',12,'markerfacecolor','b')
+                
+                figure(6)
+                plot(mvcotemplon,mvcotemplat,'bp')
                 
                 location(q).lat=mvcotemplat;
                 location(q).lon=mvcotemplon;
@@ -224,14 +247,18 @@ for foldernum=good_data(15)' %files that have data in them! Go through one by on
         end
         
         keyboard
-        
+         
+          figure(6)
+         plot(mvcotemplon,mvcotemplat,'kp')
+         if ~isempty(templon) && ~isempty(templat)
+         plot(templon,templat,'p','color',[0.4 0.4 0.4])
+         end
     end %files within tempdata
     
     eval(['location_' datafolders{foldernum} '=location;'])
     eval(['save ' matsource 'location_' datafolders{foldernum} ' location_' datafolders{foldernum}])
     clear location
-    
-    
+        
 end %foldernum
 
 
@@ -258,38 +285,40 @@ location_rec=location_rec(jj,:);
 %% and plot!
 
 clf
-plot(location_mat(:,2),location_mat(:,1),'.'), hold on
+plot(location_mat(:,2),location_mat(:,1),'.')
 
 %% hmmm, if some do look suspicious:
+
 [x y]=ginput;
 hold on
 plot(x,y,'r.')
 
-%% now let's find those points and see if want to adjust:
-
-q=6; %how many points you need to correct:
-plot(x(q),y(q),'kp','markersize',12)
-
-qq=find((1e-2)*floor(100*location_mat(:,2))==((1e-2)*floor(100*x(q))) & (1e-2)*floor(100*location_mat(:,1))==((1e-2)*floor(100*y(q))));
-
-disp([location_rec{qq,1:2} location_rec{qq,4}])
-
-foldername=location_rec{qq,1};
-eval(['templist={location_' foldername '(:).file}'';'])
-
-w=find(strcmp(templist,location_rec{qq,3})==1);
-
-mvconum=regexp(location_rec{qq,4},'MVCO_\d{3}','match');
-jj=find(strcmp(mvco_event_num,mvconum)==1);
-
-%%
-eval(['location_' foldername  '(w).lat=mvco_lat(jj);'])
-eval(['location_' foldername '(w).lat=mvco_lat(jj);'])
-eval(['location_' foldername '(w).notes=''lat/lon entered but seems incorrect compared to log; using mvco event: ' mvconum{:} ' lat/lon for position'';'])
-
-plot(mvco_lon(jj),mvco_lat(jj),'rp','markersize',12)
-
-%% If that looks good, can save:
-
-eval(['save ' matsource 'location_' datafolders{foldernum} ' location_' datafolders{foldernum}])
+%% If need to investigate and adjust data:
+% 
+% q=1; %how many points you need to correct:
+% plot(x(q),y(q),'kp','markersize',12)
+% 
+% qq=find((1e-2)*floor(100*location_mat(:,2))==((1e-2)*floor(100*x(q))) & (1e-2)*floor(100*location_mat(:,1))==((1e-2)*floor(100*y(q))));
+% 
+% disp([location_rec{qq,1:2} location_rec{qq,4}])
+% 
+% foldername=location_rec{qq,1};
+% eval(['templist={location_' foldername '(:).file}'';'])
+% 
+% w=find(strcmp(templist,location_rec{qq,3})==1);
+% 
+% mvconum=regexp(location_rec{qq,4},'MVCO_\d{3}','match');
+% jj=find(strcmp(mvco_event_num,mvconum)==1);
+% 
+% %%
+% eval(['location_' foldername  '(w).lat=mvco_lat(jj);'])
+% eval(['location_' foldername '(w).lon=mvco_lon(jj);'])
+% eval(['location_' foldername '(w).notes=''lat/lon entered but seems incorrect compared to log; using mvco event: ' mvconum{:} ' lat/lon for position'';'])
+% 
+% plot(mvco_lon(jj),mvco_lat(jj),'rp','markersize',12)
+% 
+% %% If that looks good, can save:
+% 
+% matsource=fullfile(sourcepath,foldername,'/mat_outfiles/');
+% eval(['save ' matsource 'location_' foldername ' location_' foldername])
 
