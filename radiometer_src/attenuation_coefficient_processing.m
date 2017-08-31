@@ -109,18 +109,18 @@ for filenum=1:numfiles
         [~,impr,ipar]=intersect(dc(jj),edl_ind);
         impr=dc(jj(impr)); %ipar already indexes into edl_PAR...
         
-        impr=impr(32:end);
-        ipar=ipar(32:end);
-
+        %         impr=impr(32:end);
+        %         ipar=ipar(32:end);
+        
         %now, calculate k:
         [K,~,~,~,STATS] = regress(log(edl_PAR(ipar)),[ones(size(depth(impr))) depth(impr)]);
         
-         %for a split k:
-%          d1=find(depth(impr) < 16);
-%          d2=find(depth(impr) > 17);
-%         [K1,~,~,~,STATS1] = regress(log(edl_PAR(ipar(d1))),[ones(size(depth(impr(d1)))) depth(impr(d1))]);
-%         [K2,~,~,~,STATS2] = regress(log(edl_PAR(ipar(d2))),[ones(size(depth(impr(d2)))) depth(impr(d2))]);
-
+        %for a split k:
+        %          d1=find(depth(impr) < 16);
+        %          d2=find(depth(impr) > 17);
+        %         [K1,~,~,~,STATS1] = regress(log(edl_PAR(ipar(d1))),[ones(size(depth(impr(d1)))) depth(impr(d1))]);
+        %         [K2,~,~,~,STATS2] = regress(log(edl_PAR(ipar(d2))),[ones(size(depth(impr(d2)))) depth(impr(d2))]);
+        
         if STATS(1) < 0.9
             disp('Hmmm...maybe not such a great regression fit to find k?')
         end
@@ -165,17 +165,17 @@ for filenum=1:numfiles
             K_PAR(filenum).flag=0;
             
             %split cast:
-%             K_PAR(filenum).file=filename;
-%             K_PAR(filenum).stats=STATS1;
-%             K_PAR(filenum).K1=K1;
-%             K_PAR(filenum).depth_index1=impr(d1);
-%             K_PAR(filenum).par_index1=ipar(d1);
-%             K_PAR(filenum).stats=STATS2;
-%             K_PAR(filenum).K2=K2;
-%             K_PAR(filenum).depth_index2=impr(d2);
-%             K_PAR(filenum).par_index2=ipar(d2);
-%             K_PAR(filenum).NOTES='split cast from 0-15 and 16-max';
-%             K_PAR(filenum).flag=3;
+            %             K_PAR(filenum).file=filename;
+            %             K_PAR(filenum).stats=STATS1;
+            %             K_PAR(filenum).K1=K1;
+            %             K_PAR(filenum).depth_index1=impr(d1);
+            %             K_PAR(filenum).par_index1=ipar(d1);
+            %             K_PAR(filenum).stats=STATS2;
+            %             K_PAR(filenum).K2=K2;
+            %             K_PAR(filenum).depth_index2=impr(d2);
+            %             K_PAR(filenum).par_index2=ipar(d2);
+            %             K_PAR(filenum).NOTES='split cast from 0-15 and 16-max';
+            %             K_PAR(filenum).flag=3;
             
         end
         
@@ -198,9 +198,9 @@ eval(['save ' matsource 'K_PAR_' datafolders{foldernum} '.mat K_PAR_' datafolder
 
 %disp K's:
 k_rec=[];
-for filenum=1:numfiles    
+for filenum=1:numfiles
     if K_PAR(filenum).flag ==0
-    k_rec=[k_rec; K_PAR(filenum).K(2)];
+        k_rec=[k_rec; K_PAR(filenum).K(2)];
     end
 end
 
@@ -210,37 +210,118 @@ disp({K_PAR(:).flag}')
 close all
 clear K_PAR
 
-%% Okay, and if you want to check the fits for a certain set of data:
 
-foldernum=good_data(1);
-load(fullfile(sourcepath,datafolders{foldernum},['/mat_outfiles/data_' datafolders{foldernum}]))
+
+%% IF WANT TO CHECK K AND REGRESSION FITS FOR THE DATA:
+
+%sourcepath=fullfile('\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\processed_radiometer_files\'); % path to folders with raw data...
+sourcepath=fullfile('/Volumes/Lab_data/MVCO/HyperPro_Radiometer/');
+processed_path=fullfile(sourcepath,'/processed_radiometer_files/');
+
+d = dir(processed_path);
+isub = [d(:).isdir]; %# returns logical vector
+foldernames = {d(isub).name}'; %names of folders
+temp=regexp(foldernames,'\d{1,2}\w{3,4}20\d{2}'); %find all folders with this naming scheme
+datafolders = foldernames(cellfun('isempty',temp)==0);
+%there should be (as of summer 2017) only 20 folders...
+
+%load in the list of good data folders:
+load(fullfile(sourcepath,'good_data_folders.mat'))
+
+%% put into a for loop or just go one by one....
+
+clearvars K_PAR tempdata
+
+foldernum=good_data(15);
+load(fullfile(processed_path,datafolders{foldernum},['/mat_outfiles/data_' datafolders{foldernum} '.mat']))
 eval(['tempdata=data_' datafolders{foldernum} ';'])
-load(fullfile(sourcepath,datafolders{foldernum},['/mat_outfiles/K_PAR_' datafolders{foldernum}]));
+load(fullfile(processed_path,datafolders{foldernum},['/mat_outfiles/K_PAR_' datafolders{foldernum}]));
 eval(['K_PAR=K_PAR_' datafolders{foldernum} ';'])
+
+set(gcf,'position',[33         468        1218         510])
+
 %%
-filenum=1;
+for filenum=1:length(K_PAR);
+    
+    if K_PAR(filenum).flag==0;
+        
+        filename=tempdata(filenum).file;
+        depth=tempdata(filenum).depth;
+        edl_ind=tempdata(filenum).edl_ind;
+        edl_PAR=tempdata(filenum).edl_PAR;
+        K=K_PAR(filenum).K;
+        impr=K_PAR(filenum).depth_index;
+        ipar=K_PAR(filenum).par_index;
+        STATS=K_PAR(filenum).stats;
+        
+        subplot(1,2,1,'replac e')
+        [ax h1 h2]=plotyy(tempdata(filenum).mprtime,depth,tempdata(filenum).mprtime(edl_ind),edl_PAR);
+        hold(ax(1)); hold(ax(2));
+        plot(ax(1),tempdata(filenum).mprtime(impr),depth(impr),'.','markersize',12)
+        plot(ax(2),tempdata(filenum).mprtime(impr),edl_PAR(ipar),'.','markersize',12)
+        set(ax(1),'YDir','reverse','xgrid','on','ygrid','on')
+        title(datafolders{foldernum})
+        ylabel(ax(1),'Depth')
+        ylabel(ax(2),'PAR')
+        datetick(ax(2))
+        datetick(ax(1))
+        
+        subplot(1,2,2,'replace')
+        plot(log(edl_PAR),depth(edl_ind),'.'), hold on
+        plot(log(edl_PAR(ipar)),depth(impr),'.')
+        plot(K(1)+K(2)*depth(impr),depth(impr),'-')
+        set(gca,'YDir','reverse')
+        title(['Folder: ' num2str(foldernum) ', File: ' num2str(filenum) ' out of ' num2str(length(K_PAR)) '; ' filename])
+        xl=get(gca,'xlim');  yl=get(gca,'ylim');
+        text(0.80*diff(xl)+xl(1),0.95*diff(yl)+yl(1),{['K: ' num2str(K(2))];['R2: ' num2str(STATS(1))] })
+        
+        pause
+        clf
+        
+    elseif K_PAR(filenum).flag==3; %split casts! Can look at both :)
+        
+        filename=tempdata(filenum).file;
+        depth=tempdata(filenum).depth;
+        edl_ind=tempdata(filenum).edl_ind;
+        edl_PAR=tempdata(filenum).edl_PAR;
 
-depth=tempdata(filenum).depth;
-edl_ind=tempdata(filenum).edl_ind;
-edl_PAR=tempdata(filenum).edl_PAR;
-K=K_PAR(filenum).K;
+        STATS1=K_PAR(filenum).stats;
+        K1=K_PAR(filenum).K1;
+        impr1=K_PAR(filenum).depth_index1;
+        ipar1=K_PAR(filenum).par_index1;
+        STATS2=K_PAR(filenum).stats;
+        K2=K_PAR(filenum).K2;
+        impr2=K_PAR(filenum).depth_index2;
+        ipar2=K_PAR(filenum).par_index2;
 
-figure(filenum), set(gcf,'position',[33         468        1218         510])
-subplot(1,2,1,'replace'), hold on
-[ax h1 h2]=plotyy(tempdata(filenum).mprtime,depth,tempdata(filenum).mprtime(edl_ind),edl_PAR)
-%plot(tempdata(filenum).mprtime(impr),depth(impr),'.-')
-%plot(tempdata(filenum).mprtime(impr),0.1*edl_PAR(ipar)-20,'.-')
-datetick(ax(2))
-datetick(ax(1))
-set(ax(1),'YDir','reverse')
-ylabel(ax(1),'Depth')
-ylabel(ax(2),'PAR')
-
-subplot(1,2,2,'replace')
-plot(log(edl_PAR),depth(edl_ind),'.'), hold on
-%plot(log(edl_PAR(ipar)),depth(impr),'.')
-%plot(K(1)+K(2)*depth(impr),depth(impr),'-')
-plot(K(1)+K(2)*depth,depth,'-')
-set(gca,'YDir','reverse')
-title(['File: ' num2str(filenum) ' ; ' filename])
-text(2,4,['K: ' num2str(K(2))])
+        subplot(1,2,1,'replace')
+        [ax h1 h2]=plotyy(tempdata(filenum).mprtime,depth,tempdata(filenum).mprtime(edl_ind),edl_PAR);
+        hold(ax(1)); hold(ax(2));
+        plot(ax(1),tempdata(filenum).mprtime(impr1),depth(impr1),'.','markersize',12,'color',[0.2081    0.1663    0.5292])
+        plot(ax(2),tempdata(filenum).mprtime(impr1),edl_PAR(ipar1),'.','markersize',12,'color',[0.2081    0.1663    0.5292])
+        plot(ax(1),tempdata(filenum).mprtime(impr2),depth(impr2),'.','markersize',12,'color',[0.9763    0.9831    0.0538])
+        plot(ax(2),tempdata(filenum).mprtime(impr2),edl_PAR(ipar2),'.','markersize',12,'color',[0.9763    0.9831    0.0538])
+        set(ax(1),'YDir','reverse','xgrid','on','ygrid','on')
+        title(datafolders{foldernum})
+        ylabel(ax(1),'Depth')
+        ylabel(ax(2),'PAR')
+        datetick(ax(2))
+        datetick(ax(1))
+        
+        subplot(1,2,2,'replace')
+        plot(log(edl_PAR),depth(edl_ind),'.'), hold on
+        plot(log(edl_PAR(ipar1)),depth(impr1),'.','color',[0.2081    0.1663    0.5292])
+        plot(K1(1)+K1(2)*depth(impr1),depth(impr1),'-')
+        plot(log(edl_PAR(ipar2)),depth(impr2),'.','color',[0.9763    0.9831    0.0538])
+        plot(K2(1)+K2(2)*depth(impr2),depth(impr2),'-')
+        set(gca,'YDir','reverse')
+        title(['Folder: ' num2str(foldernum) ', File: ' num2str(filenum) ' out of ' num2str(length(K_PAR)) '; ' filename ' SPLIT CAST!'])
+        xl=get(gca,'xlim');  yl=get(gca,'ylim');
+        text(0.80*diff(xl)+xl(1),0.85*diff(yl)+yl(1),{['K1: ' num2str(K1(2))];['R2: ' num2str(STATS1(1))] })
+        text(0.80*diff(xl)+xl(1),0.95*diff(yl)+yl(1),{['K2: ' num2str(K2(2))];['R2: ' num2str(STATS2(1))] })
+        
+        pause
+        clf
+    end
+    
+end
