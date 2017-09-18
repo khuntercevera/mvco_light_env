@@ -27,6 +27,55 @@ end;
 plot(unqdays+1/6, ecochl_mean(:,1), 'b^', 'markerfacecolor', 'b')
 plot(unqdays+2/3, ecochl_mean(:,2), 'g^', 'markerfacecolor', 'g')
 
+
+%% Now, load in the fluorometer deployments to see if any went awry:
+
+filename = '/Users/kristenhunter-cevera/MVCO_light_at_depth/fluorometer/Fluor_MVCO_deploy_matlab_readable.txt';
+delimiter = '\t';
+startRow = 2;
+formatSpec = '%s%s%s%s%s%[^\n\r]';
+fileID = fopen(filename,'r');
+dataArray = textscan(fileID, formatSpec, 'Delimiter', delimiter, 'HeaderLines' ,startRow-1, 'ReturnOnError', false);
+fclose(fileID);
+
+%% reorganize into matrix:
+fluor_deployment_titles={'Deployment Number';'Serial number';'Date In';'Date Out';'Calibration'};
+
+fluor_deployment=cell(33,5);
+
+temp=str2num(char(dataArray{:,1}));
+for j=1:33 %predetermined :)
+    
+    jj=find(temp==j);
+    
+    fluor_deployment{j,1}=j;
+    fluor_deployment{j,2}=char(dataArray{2}(jj(1)));
+
+    if ~strcmp(char(dataArray{2}(jj(1))),char(dataArray{2}(jj(2))))
+        keyboard
+    end
+    
+    fluor_deployment{j,3}=datenum(char(dataArray{3}(jj(1))));
+    if j~=33
+    fluor_deployment{j,4}=datenum(char(dataArray{3}(jj(2))));
+    else
+        fluor_deployment{j,4}=datenum('sept-18-2017');
+    end
+    
+    fluor_deployment{j,5}=datenum(char(dataArray{5}(jj(1))));
+end
+
+%% and now color coded figure!
+%can organize by deployment, by calibration or by serial number
+cc=parula(33);
+for j=1:33
+    jj=find(cellfun(@(x) x==j,fluor_deployment(:,1))==1);
+    
+    ii=find(dat(:,1) >= fluor_deployment{jj,3} & dat(:,1) <= fluor_deployment{jj,4});
+    plot(dat(ii,1), dat(ii,7),'-', 'color',cc(j,:), 'linewidth', 2)
+end
+
+
 %%
 load /Users/kristenhunter-cevera/MVCO_light_at_depth/fluorometer/CHLatASIT.mat %load discrete sample extracted chl results
 hold on
