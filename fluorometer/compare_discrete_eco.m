@@ -65,15 +65,41 @@ for j=1:33 %predetermined :)
     fluor_deployment{j,5}=datenum(char(dataArray{5}(jj(1))));
 end
 
-%% and now color coded figure!
+%% and now color coded figure! 
 %can organize by deployment, by calibration or by serial number
-cc=parula(33);
-for j=1:33
-    jj=find(cellfun(@(x) x==j,fluor_deployment(:,1))==1);
+%do this by creating a matching matrix of values:
+
+deploy_match=nan(length(dat),3);
+for q=1:length(dat)
     
-    ii=find(dat(:,1) >= fluor_deployment{jj,3} & dat(:,1) <= fluor_deployment{jj,4});
-    plot(dat(ii,1), dat(ii,7),'-', 'color',cc(j,:), 'linewidth', 2)
+    deploy_match(q,1)=dat(q,1);
+    
+    ii=find(dat(q,1) >= cell2mat(fluor_deployment(:,3)) & dat(q,1) <= cell2mat(fluor_deployment(:,4)));
+    
+    if length(ii) == 1
+        deploy_match(q,2)=fluor_deployment{ii,1};
+        deploy_match(q,3)=str2num(char(regexp(fluor_deployment{ii,2},'\d{3}','match')));
+        deploy_match(q,4)=fluor_deployment{ii,5};
+    elseif length(ii) > 1
+        keyboard
+    end
 end
+
+%% internal run code:
+
+ deploy_match((deploy_match(:,3)==24),5)=1;
+ deploy_match((deploy_match(:,3)==42),5)=2;  
+ deploy_match((deploy_match(:,3)==256),5)=3;    
+ deploy_match((deploy_match(:,3)==417),5)=4;      
+ deploy_match((deploy_match(:,3)==691),5)=5;      
+ deploy_match((deploy_match(:,3)==693),5)=6;      
+ deploy_match((deploy_match(:,3)==694),5)=7;      
+ deploy_match((deploy_match(:,3)==957),5)=8;      
+ deploy_match((deploy_match(:,3)==960),5)=9;      
+ deploy_match((deploy_match(:,3)== 962),5)=10; 
+ 
+scatter(dat(:,1), dat(:,7), 40, deploy_match(:,5),'filled')
+
 
 
 %%
@@ -191,3 +217,45 @@ y = 0:.1:4.5;
 x = .5*y.^2;
 hold on
 plot(x, y, 'g-')
+
+
+%% Remerge some of the data matrices and plot based on deployment, fluorometer number or calibration?
+
+%SOME DAYS HAVE MORE THAN VALUE!!!
+
+total_days=union(FLday,HPLCday);
+total_match=[];
+
+for q=1:length(total_days)
+    
+    %total_match(q,1)=total_days(q);
+    
+    q1=find(FLday==total_days(q));
+    if ~isempty(q1) %meaning have a flurometeric measurement
+        temp1=[repmat(total_days(q),length(q1),1) FL_chl(q1,1) ecochl_match(q1,1:2)];
+    else
+        temp1=nan(1,4);
+   end
+    
+    q2=find(HPLCday==total_days(q));
+    if ~isempty(q2)%meaning have a hplc measurement
+        temp2=[repmat(total_days(q),length(q2),1) FL_chl(q2,1) ecochl_match(q2,1:2)];
+    else
+        temp2=nan(1,4);
+    end
+
+    if size(temp1,1) ~= size(temp2,1)
+        tt=max(size(temp1,1),size(temp2,1));
+        if size(temp1,1)~=tt %pad temp1
+            temp1=[temp1; nan(tt-size(temp1,1),4)];
+        elseif size(temp2,1) ~= tt
+            temp2=[temp2; nan(tt-size(temp2,1),4)];
+        end
+        total_match=[total_match; temp1 temp2]; 
+    else
+        total_match=[total_match; temp1 temp2]; 
+    end   
+    
+end
+
+%Eish, okay add in the deployment info....
