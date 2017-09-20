@@ -1,4 +1,5 @@
 load /Users/kristenhunter-cevera/MVCO_light_at_depth/fluorometer/ecochl_all.mat %load all in situ fluorometer results (ecofl series sensors)
+%%
 plot(dat(:,1), dat(:,7), 'c-', 'linewidth', 2)
 ylim([0 15])
 datetick('x')
@@ -239,7 +240,7 @@ for q=1:length(total_days)
     
     q2=find(HPLCday==total_days(q));
     if ~isempty(q2)%meaning have a hplc measurement
-        temp2=[repmat(total_days(q),length(q2),1) FL_chl(q2,1) ecochl_match(q2,1:2)];
+        temp2=[repmat(total_days(q),length(q2),1) HPLC_chl(q2,1) ecochl_match_hplc(q2,1:2)];
     else
         temp2=nan(1,4);
     end
@@ -259,3 +260,237 @@ for q=1:length(total_days)
 end
 
 %Eish, okay add in the deployment info....
+
+for q=1:size(total_match,1)
+     
+    ii=find(total_match(q,1) >= cell2mat(fluor_deployment(:,3)) & total_match(q,1) <= cell2mat(fluor_deployment(:,4)));
+    
+    if ~isempty(ii)
+        ii=ii(1); %a quick fix...
+        
+        total_match(q,9)=fluor_deployment{ii,1};
+        
+        switch str2num(char(regexp(fluor_deployment{ii,2},'\d{3}','match')))           
+            case 24
+                total_match(q,10)=1;
+            case 42
+                total_match(q,10)=2;  
+            case 256
+                 total_match(q,10)=3; 
+            case 417
+                total_match(q,10)=4;      
+            case 691
+                total_match(q,10)=5;  
+            case 693
+                total_match(q,10)=6;      
+            case 694
+                total_match(q,10)=7;      
+            case 957
+                total_match(q,10)=8;      
+            case 960
+                total_match(q,10)=9;      
+            case 962
+                total_match(q,10)=10;
+        end      
+        total_match(q,11)=fluor_deployment{ii,5};
+        
+    end
+end
+
+%%
+addpath /Users/kristenhunter-cevera/Documents/MATLAB/mvco_tools/
+total_match(:,12)=find_yearday(total_match(:,1));
+qq=find(isnan(total_match(:,1)));
+total_match(qq,12)=find_yearday(total_match(qq,5));
+
+total_match_titles={'matdate-FL'; 'FL_chl'; 'ecochl match night before'; 'echochl match night after'; ...
+    'matdate-HPLC'; 'HPLC_chl'; 'ecochl match night before'; 'echochl match night after';...
+    'deployment';'serial number';'calibration';'day of year'};
+
+%% and the climatologies....
+
+[time_fl, dy_fl, flyears, flyrdy] = timeseries2ydmat(total_match(:,1), total_match(:,2));
+[wk_fl_avg, wk_fl_std, yd_wk] = dy2wkmn_climatology(dy_fl, flyears);
+
+jj=find(~isnan(total_match(:,5)));
+[time_hplc, dy_hplc, hplcyears, hplcyrdy] = timeseries2ydmat(total_match(jj,5), total_match(jj,6));
+[wk_hplc_avg, wk_hplc_std, hplc_yd_wk] = dy2wkmn_climatology(dy_hplc, hplcyears);
+
+jj=find(~isnan(unqdays));
+[time_econight, dy_econight, ecoyears, ecoyrdy] = timeseries2ydmat(unqdays(jj), ecochl_mean(jj,1)); %nighttime avg
+econight_avg=nanmean(dy_econight,2);
+econight_med=nanmedian(dy_econight,2);
+econight_std=nanstd(dy_econight,0,2);
+[econight_wk, econight_wk, yd_wk]=ydmat2weeklymat(dy_econight,ecoyears);
+
+[time_ecoday, dy_ecoday, ecoyears, ecoyrdy] = timeseries2ydmat(unqdays(jj), ecochl_mean(jj,2)); %daytime avg
+ecoday_avg=nanmean(dy_ecoday,2);
+ecoday_med=nanmedian(dy_ecoday,2);
+ecoday_std=nanstd(dy_ecoday,0,2);
+[ecoday_wk, ecoday_wk, yd_wk]=ydmat2weeklymat(dy_ecoday,ecoyears);
+
+
+%% finally the plot...
+
+clf
+subplot(3,3,1,'replace'), hold on
+plot(total_match(:,3),total_match(:,4),'.','markersize',8)
+%plot(total_match(:,7),total_match(:,8),'.','markersize',8)
+xlabel('Chl (mg m^{-3}), est. in situ night before')
+ylabel('Chl (mg m^{-3}), est. in situ night after')
+line([0 15],[0 15])
+set(gca,'box','on')
+title('Night before vs. after')
+
+subplot(3,3,2,'replace'), hold on
+plot(ecochl_mean(:,1),ecochl_mean(:,2),'.','markersize',8)
+xlabel('Chl (mg m^{-3}), est. in situ night')
+ylabel('Chl (mg m^{-3}), est. in situ day')
+line([0 40],[0 40])
+set(gca,'box','on')
+title('Day vs. Night avg')
+
+subplot(3,3,3,'replace'), hold on
+plot(total_match(:,2), total_match(:,6), '.','markersize',8)
+xlabel('Chl (mg m^{-3}), extract fluorometric')
+ylabel('Chl (mg m^{-3}), extract HPLC')
+line([0 12],[0 12])
+set(gca,'box','on')
+title('Fl vs. HPLC')
+
+subplot(3,3,4,'replace'), hold on
+plot(total_match(:,2), nanmean(total_match(:,3:4),2), '.','markersize',8)
+plot(total_match(:,6), nanmean(total_match(:,7:8),2), '.','markersize',8)
+ylabel('Chl (mg m^{-3}), est. in situ (mean btw nights)')
+xlabel('Chl (mg m^{-3}), extract')
+legend('FL', 'HPLC')
+set(gca,'box','on')
+title('Estimated vs. extracted')
+
+%  and now color coded!
+colormap jet
+subplot(3,3,7,'replace'), hold on
+scatter(total_match(:,2), nanmean(total_match(:,3:4),2),20,total_match(:,12),'filled')
+%scatter(total_match(:,6), nanmean(total_match(:,7:8),2),30,total_match(:,12),'filled')
+ylabel('Chl (mg m^{-3}), est. in situ (mean btw nights)')
+xlabel('Chl (mg m^{-3}), FL extract')
+set(gca,'box','on')
+
+hbar=colorbar;
+set(hbar,'YDir','reverse')
+title('by year day')
+
+subplot(3,3,8,'replace'), hold on
+scatter(total_match(:,2), nanmean(total_match(:,3:4),2),20,total_match(:,9),'filled')
+%scatter(total_match(:,6), nanmean(total_match(:,7:8),2),30,total_match(:,12),'filled')
+ylabel('Chl (mg m^{-3}), est. in situ (mean btw nights)')
+xlabel('Chl (mg m^{-3}), FL extract')
+hbar=colorbar;
+% set(hbar,'YDir','reverse')
+title('by deployment')
+set(gca,'box','on')
+
+subplot(3,3,9,'replace'), hold on
+scatter(total_match(:,2), nanmean(total_match(:,3:4),2),20,total_match(:,10),'filled')
+%scatter(total_match(:,6), nanmean(total_match(:,7:8),2),30,total_match(:,12),'filled')
+ylabel('Chl (mg m^{-3}), est. in situ (mean btw nights)')
+xlabel('Chl (mg m^{-3}), FL extract')
+hbar=colorbar;
+% set(hbar,'YDir','reverse')
+title('by instrument')
+set(gca,'box','on')
+
+% subplot(3,4,8,'replace'), hold on
+% scatter(total_match(:,2), nanmean(total_match(:,3:4),2),30,total_match(:,11),'filled')
+% %scatter(total_match(:,6), nanmean(total_match(:,7:8),2),30,total_match(:,12),'filled')
+% ylabel('Chl (mg m^{-3}), est. in situ (mean)')
+% xlabel('Chl (mg m^{-3}), extract')
+% hbar=colorbar;
+% % set(hbar,'YDir','reverse')
+% title('by calibration')
+%
+% 
+% line([0 12], [0 12])
+% y = 0:.1:4.5;
+% x = .5*y.^2;
+% hold on
+% plot(x, y, 'g-')
+
+subplot(3,3,5,'replace')
+yrdy_wk=1:7:358;
+plot(yrdy_wk, wk_fl_avg,'.-')
+hold on
+plot(yrdy_wk, wk_hplc_avg,'.-')
+xlim([0 365])
+ylabel('Chl (mg m^{-3}), extract')
+legend('FL','HPLC')
+xlabel('Year day')
+set(gca,'box','on')
+title('Weekly climatologies')
+
+subplot(3,3,6,'replace')
+hold on
+plot(total_match(:,12),total_match(:,2),'.')
+plot(1:366,econight_med,'-')
+plot(1:366,ecoday_med,'-')
+legend('FL','est night','est day')
+xlim([0 365])
+ylabel('Chl (mg m^{-3})')
+xlabel('Year day')
+set(gca,'box','on')
+title('extracted fl data plus daily estimated medians')
+%% hmmm, maybe a three panel figure would be helpful?
+
+colormap jet
+subplot(1,3,1,'replace'), hold on
+scatter(total_match(:,2), nanmean(total_match(:,3:4),2),20,total_match(:,12),'filled')
+%scatter(total_match(:,6), nanmean(total_match(:,7:8),2),30,total_match(:,12),'filled')
+ylabel('Chl (mg m^{-3}), est. in situ (mean btw nights)')
+xlabel('Chl (mg m^{-3}), FL extract')
+hbar=colorbar;
+set(hbar,'YDir','reverse')
+ylabel(hbar,'Year Day')
+title('by year day')
+set(gca,'box','on')
+
+y=nanmean(total_match(:,3:4),2);
+
+k1=find(total_match(:,12) > 90 & total_match(:,12) < 240);
+%to_exclude=find(y > 5 & total_match(:,2) < 2);
+%k1=setxor(to_exclude,k);
+k2=setxor(k1,1:length(total_match(:,1)));
+
+subplot(1,3,2,'replace')
+scatter(total_match(k1,2), nanmean(total_match(k1,3:4),2),20,total_match(k1,12),'filled')
+caxis([0 366])
+ylim([0 25])
+xlim([0 12])
+ylabel('Chl (mg m^{-3}), est. in situ (mean btw nights)')
+xlabel('Chl (mg m^{-3}), FL extract')
+set(gca,'box','on')
+
+subplot(1,3,3,'replace')
+scatter(total_match(k2,2), nanmean(total_match(k2,3:4),2),20,total_match(k2,12),'filled')
+caxis([0 366])
+ylabel('Chl (mg m^{-3}), est. in situ (mean btw nights)')
+xlabel('Chl (mg m^{-3}), FL extract')
+set(gca,'box','on')
+%%
+subplot(1,3,2,'replace')
+plot(total_match(k1,2), nanmean(total_match(k1,3:4),2),'.'), hold on
+x=[ones(size(total_match(k1,2))) total_match(k1,2)];
+y=nanmean(total_match(k1,3:4),2);
+[b,~,~,~,stats1]=regress(y,x);
+line([0 8],[b(1) 8*b(2)+b(1)])
+
+subplot(1,3,3,'replace')
+plot(total_match(k2,2), nanmean(total_match(k2,3:4),2),'.')
+
+%scatter(total_match(:,6), nanmean(total_match(:,7:8),2),30,total_match(:,12),'filled')
+ylabel('Chl (mg m^{-3}), est. in situ (mean)')
+xlabel('Chl (mg m^{-3}), extract')
+
+x=[ones(size(total_match(k2,2))) total_match(k2,2)];
+y=nanmean(total_match(k2,3:4),2);
+[b,~,~,~,stats2]=regress(y,x);
+line([0 8],[b(1) 8*b(2)+b(1)])
