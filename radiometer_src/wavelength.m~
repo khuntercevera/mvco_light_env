@@ -18,7 +18,6 @@ load(fullfile(sourcepath,'good_data_folders.mat'))
 %%
 wv_record=[];
 wv_log={};
-wv_spectra={};
 plotflag=0;
 extraplotflag=0;
 
@@ -41,26 +40,25 @@ for foldernum=good_data' %are these the ones with lat/lon?
     
     % because some of the casts were split, need to account for this:
     for filenum=1:length(K_PAR);
-        
+
         
         if K_PAR(filenum).flag ~=1 && K_PAR(filenum).flag ~=2 %not a cast or two short a cast
             
-            wv=tempdata(filenum).wavelen_downwell;
-            edl=tempdata(filenum).adj_edl;
-            depth=tempdata(filenum).depth;
-            edl_ind=tempdata(filenum).edl_ind;
-            esl_ind=tempdata(filenum).esl_ind;
-            
-            wv_sol=tempdata(filenum).wavelen_solarst;
-            esl=tempdata(filenum).adj_esl;
-            
-            if K_PAR(filenum).flag==0 %a legit cast, 1 is empty file, 2 is data, but not a cast
+                wv=tempdata(filenum).wavelen_downwell;
+                edl=tempdata(filenum).adj_edl;
+                depth=tempdata(filenum).depth;
+                edl_ind=tempdata(filenum).edl_ind;
                 
+                wv_sol=tempdata(filenum).wavelen_solarst;
+                esl=tempdata(filenum).adj_esl;
+                
+            if K_PAR(filenum).flag==0 %a legit cast, 1 is empty file, 2 is data, but not a cast             
+              
                 impr=K_PAR(filenum).depth_index;
                 ipar=K_PAR(filenum).par_index;
                 
             elseif K_PAR(filenum).flag==3;
-                
+       
                 impr=K_PAR(filenum).depth_index1;
                 ipar=K_PAR(filenum).par_index1;
                 
@@ -79,49 +77,13 @@ for foldernum=good_data' %are these the ones with lat/lon?
             i8=find(max_wv(:,1)>7.5 & max_wv(:,1)<8.5);
             i12=find(max_wv(:,1)>11.5 & max_wv(:,1)<12.5);
             
-            %find corresponding solar std spectra...a bit of a mission!
-            %Note, this may not be an exact match up in time...will need to think on this more...
-            if ~isempty(i4)
-                i4_sol=nan(size(i4));
-                for j=1:length(i4)
-                    [~, jj]=min(abs(esl_ind-impr(i4(j)))); %find closest index
-                    i4_sol(j)=jj;
-                end
-            end
-            
-            %if need to check:
-            %time=tempdata(filenum).mprtime;
-            %[time(esl_ind(i4_sol))-time((impr(i4)))]
-            
-             if ~isempty(i8)
-                i8_sol=nan(size(i8));
-                for j=1:length(i8)
-                    [~, jj]=min(abs(esl_ind-impr(i8(j)))); %find closest index
-                    i8_sol(j)=jj;
-                end
-             end
-            
-              if ~isempty(i12)
-                i12_sol=nan(size(i12));
-                for j=1:length(i12)
-                    [~, jj]=min(abs(esl_ind-impr(i12(j)))); %find closest index
-                    i12_sol(j)=jj;
-                end
-              end
-            
             if isempty(i4), r4=[NaN NaN]; else r4=[nanmean(max_wv(i4,1)) mode(max_wv(i4,2))]; end
             if isempty(i8), r8=[NaN NaN]; else r8=[nanmean(max_wv(i8,1)) mode(max_wv(i8,2))]; end
             if isempty(i12), r12=[NaN NaN]; else r12=[nanmean(max_wv(i12,1)) mode(max_wv(i12,2))]; end
             
             wv_record=[wv_record; datenum(datestr(datafolders{foldernum})) location(filenum).lat location(filenum).lon max_wv_sol r4 r8 r12];
-            wv_log=[wv_log; {datafolders{foldernum}} {foldernum} {K_PAR(filenum).file} {location(filenum).file} location(filenum).eventnum {K_PAR(filenum).NOTES} {location(filenum).notes}];
-            
-            if isempty(i4), sp4={''}; sol4={''}; else sp4={edl(ipar(i4),:)}; sol4={esl(i4_sol,:)};end
-            if isempty(i8), sp8={''}; sol8={''}; else sp8={edl(ipar(i8),:)}; sol8={esl(i8_sol,:)};end
-            if isempty(i12), sp12={''}; sol12={''};  else sp12={edl(ipar(i12),:)}; sol12={esl(i12_sol,:)}; end
-            
-            wv_spectra=[wv_spectra; sp4 sol4 sp8 sol8 sp12 sol12];
-            
+            wv_log=[wv_log; {datafolders{foldernum}} {foldernum} {K_PAR(filenum).file} {location(filenum).file} location(filenum).eventnum {K_PAR(filenum).NOTES} {location(filenum).notes}];         
+                     
             if plotflag
                 
                 subplot(1,4,1,'replace')
@@ -133,7 +95,7 @@ for foldernum=good_data' %are these the ones with lat/lon?
                 
                 subplot(1,4,2,'replace'), hold on
                 plot(wv_sol,esl,'-','color',[0.5 0.5 0.5])
-                title(tempdata(filenum).file,'Interpreter','none')
+                title(tempdata(k).file,'Interpreter','none')
                 
                 for j=1:length(ipar)
                     scatter(wv,edl(ipar(j),:),40,depth(impr(j))*ones(size(wv)),'filled')
@@ -159,6 +121,7 @@ for foldernum=good_data' %are these the ones with lat/lon?
     end
 end
 
+%%
 wv_record=[find_yearday(wv_record(:,1)) wv_record];
 
 %% recode for easier station finding:
@@ -173,7 +136,7 @@ approx_station_loc=[4 -70.567 41.325; %tower
 
 shore_pos=[41.3499,-70.5267];
 
-% set up the indexes:
+%% set up the indexes:
 
 for j=1:length(approx_station_loc)
     temp_ind=find(wv_record(:,3) > approx_station_loc(j,3)-0.01 & wv_record(:,3) < approx_station_loc(j,3)+0.01 ... %lat
@@ -181,29 +144,16 @@ for j=1:length(approx_station_loc)
     wv_record(temp_ind,13)=approx_station_loc(j,1);
 end
 
-% find the tower and node casts:
+%% find the tower and node casts:
 tn=find(wv_record(:,13)==3 | wv_record(:,13)==4);
 
 %%
 figure, hold on
-plot(wv_record(:,1),wv_record(:,8),'o','color',[0 0.7 0]) %4m max wv
-plot(wv_record(:,1),wv_record(:,10),'p','color',[0 0.5 1]) %8m max wv
-plot(wv_record(:,1),wv_record(:,12),'s','color',[0 0 0.8]) %12m max wv
+plot(wv_record(:,1),wv_record(:,8),'o') %4m max wv
+plot(wv_record(:,1),wv_record(:,10),'p') %8m max wv
+plot(wv_record(:,1),wv_record(:,12),'s') %12m max wv
 
-%hmmm - cool, looks like mainly steady at 540-560, but some interesting
-%features at 500? to explore more!
-
-%% fancier plot for time of year:
-
-figure, ylim([0 1.1]), hold on
-cc=jet(366);
-
-[~,is]=sort(wv_record(:,1));
-for q=1:size(wv_record,1)
-    plot(wv,wv_spectra{is(q),1}./repmat(max(wv_spectra{is(q),1},[],2),1,size(wv_spectra{is(q),1},2)),'.-','color',cc(wv_record(is(q),1),:))
-    pause(0.2)
-end
-
+%hmmm - cool, looks like mainly steady at 54, but some interesting features at 500
 
 %What I'd also like to do is record a set of casts, and then plot these
 %overlayed, color coded by time of year to identify any shifts??
@@ -212,3 +162,94 @@ end
 
 
 
+%%
+figure
+plot(find_yearday(wv_record(ii,1)),wv_record(ii,7),'.','markersize',12), hold on
+plot(find_yearday(wv_record(ii,1)),wv_record(ii,9),'.','markersize',12)
+plot(find_yearday(wv_record(ii,1)),wv_record(ii,11),'.','markersize',12)
+
+
+
+%%
+
+k_values=[];
+k_record={};
+lambdas=[];
+k_lambdas=[];
+
+for foldernum=good_data' %folders with viable casts in them
+    
+    %load in all the data!
+    matsource=fullfile(processed_path,datafolders{foldernum},'/mat_outfiles/');
+    
+    eval(['load ' matsource 'data_' datafolders{foldernum} '.mat'])
+    eval(['tempdata=data_' datafolders{foldernum} ';'])
+    
+    eval(['load ' matsource 'K_PAR_' datafolders{foldernum} '.mat'])
+    eval(['K_PAR=K_PAR_' datafolders{foldernum} ';'])
+    
+    eval(['load ' matsource 'location_' datafolders{foldernum} '.mat'])
+    eval(['location=location_' datafolders{foldernum} ';'])
+    
+    eval(['load ' matsource 'k_lambda_' datafolders{foldernum} '.mat'])
+    eval(['k_lambda=k_lambda_' datafolders{foldernum} ';'])
+    
+    %because some of the casts were split, need to account for this:
+    for filenum=1:length(K_PAR);
+        
+        if K_PAR(filenum).flag==0;
+            
+            k_values=[k_values; datenum(datestr(datafolders{foldernum})) location(filenum).lat location(filenum).lon K_PAR(filenum).K(2) K_PAR(filenum).stats(1) K_PAR(filenum).flag];
+            k_record=[k_record; {datafolders{foldernum}} {foldernum} {K_PAR(filenum).file} {location(filenum).file} location(filenum).eventnum {K_PAR(filenum).NOTES} {location(filenum).notes}];
+            k_lambdas=[k_lambdas; -k_lambda(filenum).k_wv(:,3)'];
+            lambdas=[lambdas; -k_lambda(filenum).k_wv(:,1)'];
+            
+        elseif K_PAR(filenum).flag==3;
+            
+            k_values=[k_values; datenum(datestr(datafolders{foldernum})) location(filenum).lat location(filenum).lon K_PAR(filenum).K1(2) NaN K_PAR(filenum).flag];
+            k_record=[k_record; {datafolders{foldernum}} {foldernum} {K_PAR(filenum).file} {location(filenum).file} location(filenum).eventnum {K_PAR(filenum).NOTES} {location(filenum).notes}];
+            k_lambdas=[k_lambdas; -k_lambda(filenum).k_wv1(:,3)'];
+            lambdas=[lambdas; k_lambda(filenum).k_wv1(:,1)'];
+        end
+    end
+    
+end
+
+if sum(sum(lambdas + repmat(-lambdas(1,:),size(lambdas,1),1)))==0
+    disp('all recorded wavelengths are the same!')
+    lambdas=lambdas(1,:);
+else
+    disp('Ruh oh - not all wavelengths are the same?')
+end
+
+%add in yearday:
+k_values=[find_yearday(k_values(:,1)) k_values];
+
+%% organize these points based on position:
+
+%a quick plot of where these points lie:
+subplot(2,3,1,'replace'), hold on
+%plot station points:
+plot(-70.567,41.325,'o','markersize',16,'color',[0.5 0.5 0.5]) %tower
+plot(-70.555,41.335,'o','markersize',16,'color',[0.5 0.5 0.5]) %node
+plot(-70.6275,41.325,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+plot(-70.505,41.325,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+plot(-70.45,41.3275,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+plot(-70.567,41.255,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+plot(-70.567,41.2,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+plot(-70.567,41.145,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+
+plot(k_values(:,4),k_values(:,3),'r.')
+
+%% Now code each cast more or less to a station number:
+
+approx_station_loc=[4 -70.567 41.325; %tower
+    3 -70.5564 41.3366; %node
+    1 -70.45 41.3275; %station 1
+    2 -70.505 41.325; %station 2
+    5 -70.6275 41.325;  %station 5
+    6 -70.567 41.255; %station 6
+    7 -70.567 41.2; %station 7
+    8 -70.567 41.145]; %station 8
+
+shore_pos=[41.3499,-70.5267];

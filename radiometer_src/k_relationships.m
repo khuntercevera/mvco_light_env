@@ -29,6 +29,8 @@ load(fullfile(sourcepath,'good_data_folders.mat'))
 
 k_values=[];
 k_record={};
+lambdas=[];
+k_lambdas=[];
 
 for foldernum=good_data' %folders with viable casts in them
     
@@ -44,6 +46,9 @@ for foldernum=good_data' %folders with viable casts in them
     eval(['load ' matsource 'location_' datafolders{foldernum} '.mat'])
     eval(['location=location_' datafolders{foldernum} ';'])
     
+    eval(['load ' matsource 'k_lambda_' datafolders{foldernum} '.mat'])
+    eval(['k_lambda=k_lambda_' datafolders{foldernum} ';'])
+    
     %because some of the casts were split, need to account for this:
     for filenum=1:length(K_PAR);
         
@@ -51,14 +56,25 @@ for foldernum=good_data' %folders with viable casts in them
             
             k_values=[k_values; datenum(datestr(datafolders{foldernum})) location(filenum).lat location(filenum).lon K_PAR(filenum).K(2) K_PAR(filenum).stats(1) K_PAR(filenum).flag];
             k_record=[k_record; {datafolders{foldernum}} {foldernum} {K_PAR(filenum).file} {location(filenum).file} location(filenum).eventnum {K_PAR(filenum).NOTES} {location(filenum).notes}];
+            k_lambdas=[k_lambdas; -k_lambda(filenum).k_wv(:,3)'];
+            lambdas=[lambdas; -k_lambda(filenum).k_wv(:,1)'];
             
         elseif K_PAR(filenum).flag==3;
             
             k_values=[k_values; datenum(datestr(datafolders{foldernum})) location(filenum).lat location(filenum).lon K_PAR(filenum).K1(2) NaN K_PAR(filenum).flag];
             k_record=[k_record; {datafolders{foldernum}} {foldernum} {K_PAR(filenum).file} {location(filenum).file} location(filenum).eventnum {K_PAR(filenum).NOTES} {location(filenum).notes}];
+            k_lambdas=[k_lambdas; -k_lambda(filenum).k_wv1(:,3)'];
+            lambdas=[lambdas; k_lambda(filenum).k_wv1(:,1)'];
         end
     end
     
+end
+
+if sum(sum(lambdas + repmat(-lambdas(1,:),size(lambdas,1),1)))==0
+    disp('all recorded wavelengths are the same!')
+    lambdas=lambdas(1,:);
+else
+     disp('Ruh oh - not all wavelengths are the same?')
 end
 
 %add in yearday:
@@ -92,7 +108,6 @@ approx_station_loc=[4 -70.567 41.325; %tower
     8 -70.567 41.145]; %station 8
 
 shore_pos=[41.3499,-70.5267];
-
 
 %% set up the indexes:
 
@@ -164,8 +179,8 @@ chl_tower=find(lat > approx_station_loc(1,3)-0.01 & lat < approx_station_loc(1,3
     lon > approx_station_loc(1,2)-0.01 & lon < approx_station_loc(1,2)+0.01);
 chl_node=find(lat > approx_station_loc(2,3)-0.01 & lat < approx_station_loc(2,3)+0.01 & ...
     lon > approx_station_loc(2,2)-0.01 & lon < approx_station_loc(2,2)+0.01);
-plot(chl_yearday(chl_tower),chlavg(chl_tower,1),'.','color',[0 0.7 0])
-plot(chl_yearday(chl_node),chlavg(chl_node,1),'.','color',[0 0.5 0])
+plot(chl_yearday(chl_tower),chlavg(chl_tower,1),'.','color',[0 0.6 0])
+plot(chl_yearday(chl_node),chlavg(chl_node,1),'.','color',[0 0.3 0])
 title('Avg total Chl values at tower and node')
 
 %% RELATIONSHIP? MATCH CHL TO CASTS
@@ -198,17 +213,6 @@ set(gca,'box','on','fontsize',14)
 xlabel('Chlorophyll Avg')
 ylabel('Attenuation coefficient, K')
 
-% a line through the points? Maybe doesn't make much sense...isn't an
-% exponential relationship? See Morel...
-% [bcoeffs,~,~,~,stats]=regress(-k_values(:,5),[ones(size(chl_match(:,2))) chl_match(:,2)]);
-% x=sort(chl_match(:,2));
-% plot(x,bcoeffs(1)+bcoeffs(2)*x,'-','color',[0.5 0.5 0.5])
-% text(0.5,0.47,['Significant linear fit, but with R2 of: ' num2str(1e-3*round(1000*stats(1)))])
-% [bcoeffs,~,~,~,stats]=regress(-k_values(jj,5),[ones(size(chl_match(jj,2))) chl_match(jj,2)]);
-% x=sort(chl_match(jj,2));
-% plot(x,bcoeffs(1)+bcoeffs(2)*x,'-','color',[0 0.5 1])
-% text(0.5,0.45,['Significant linear fit, but with R2 of: ' num2str(1e-3*round(1000*stats(1)))])
-
 
 %% and a plot of K_par vs Chl with Morel 1988 equation and then fitted equation of that form:
 
@@ -216,77 +220,125 @@ ylabel('Attenuation coefficient, K')
 
 % The curve from Morel 1988:
 %K_PAR= 0.121 * C(mg/m3)^).428
-jj=find(k_values(:,8)==3 | k_values(:,8)==4);
-plot(sort(chl_match(jj,2)),0.121*sort(chl_match(jj,2)).^0.428,'-','linewidth',2,'color',[0.5 0.5 0.5])
+plot(0.1:0.1:10,0.121*(0.1:0.1:10).^0.428,'-','linewidth',2,'color',[0.5 0.5 0.5])
+title('note log scale for x-axis')
+set(gca,'xscale','log')
+xlim([0 10])
 
-% [bcoeffs,~,~,~,stats]=regress(-cast_record(ii,2),[ones(size(chl_match(ii,2))) chl_match(ii,2)]);
-% x=sort(chl_match(ii,2));
-
-x = chl_match(ii,2);
-y = -cast_record(ii,2);
-jj=find(~isnan(x) & ~isnan(y));
-
-[X1,~,~,EXITFLAG] = lsqnonlin(@(theta) fit_powercurve(theta,x(jj),y(jj)),[0.2, 2.2]);
-plot(sort(x),X1(1)*sort(x).^X1(2),'-','color',[0 0.5 1])
-
+% fit a power curve through the data:
+%all the data:
 x = chl_match(:,2);
-y = -cast_record(:,2);
-jj=find(~isnan(x) & ~isnan(y));
-[X2,~,~,EXITFLAG] = lsqnonlin(@(theta) fit_powercurve(theta,x(jj),y(jj)),[0.2, 2.2]);
-plot(sort(x),X2(1)*sort(x).^X2(2),'-','color',[0 0 0])
+y = -k_values(:,5);
+nn=find(~isnan(x) & ~isnan(y));
+
+[X1,~,~,EXITFLAG] = lsqnonlin(@(theta) fit_powercurve(theta,x(nn),y(nn)),[0.2, 2.2]);
+plot(sort(x),X1(1)*sort(x).^X1(2),'-','color',[0 0 0])
+
+%just the tower and node:
+tn=find(k_values(:,8)==3 | k_values(:,8)==4);
+x = chl_match(tn,2);
+y = -k_values(tn,5);
+nn=find(~isnan(x) & ~isnan(y));
+[X2,~,~,EXITFLAG] = lsqnonlin(@(theta) fit_powercurve(theta,x(nn),y(nn)),[0.2, 2.2]);
+plot(sort(x),X2(1)*sort(x).^X2(2),'-','color',[0 0.5 1])
 
 %this also works!
 % f = fit(x(jj),y(jj),'power')
 % figure,
 % plot(f,x,y)
 
-set(gca,'xscale','log')
-text(0.5,0.45,['Tower data: ' num2str(X1(1)) '+x^{' num2str(X1(2)) '}'],'color',[0 0.5 1])
-text(0.5,0.42,['All data: ' num2str(X2(1)) '+x^{' num2str(X2(2)) '}'])
-text(0.5,0.40,'Morel 1988: 0.121+x^{0.428}','color',[0.4 0.4 0.4])
+text(0.2,0.45,['Tower data: ' num2str(X1(1)) 'x^{' num2str(X1(2)) '}'],'color',[0 0.5 1])
+text(0.2,0.42,['All data: ' num2str(X2(1)) 'x^{' num2str(X2(2)) '}'])
+text(0.2,0.39,'Morel 1988: 0.121x^{0.428}','color',[0.4 0.4 0.4])
 
 
 
+%% Climatologies...
 
+addpath /Users/kristenhunter-cevera/Documents/MATLAB/mvco_tools/
+ 
+% mean weekly chl:
+[time_chl, daily_chl, chl_years] = timeseries2ydmat(matdate, chlavg(:,1));
+[chl_wk_avg, chl_wk_std, yd_wk, chl_mn_avg, chl_mn_std, yd_mn] = dy2wkmn_climatology(daily_chl, chl_years);
 
+[~,is]=sort(k_values(:,2));
+[time_k, daily_k, k_years] = timeseries2ydmat(k_values(is,2), -k_values(is,5));
+[k_wk_avg, k_wk_std, k_yd_wk, k_mn_avg, k_mn_std, k_yd_mn] = dy2wkmn_climatology(daily_k, k_years);
 
-%% Mean relaionships? Monthly climatologies?
+itn=union(chl_tower,chl_node); %indexes into chl for tower and node:
+[time_chltn, daily_chltn, chltn_years] = timeseries2ydmat(matdate(itn), chlavg(itn,1));
+[chltn_wk_avg, chltn_wk_std, yd_wk, chltn_mn_avg, chltn_mn_std, yd_mn] = dy2wkmn_climatology(daily_chltn, chltn_years);
 
-% addpath /Users/kristenhunter-cevera/Documents/MATLAB/mvco_tools/
-% 
-% %mean weekly chl:
-% [time_chl, daily_chl, chl_years] = timeseries2ydmat(matdate(chl_box), chlavg(chl_box,1));
-% [chl_wk_avg, chl_wk_std, yd_wk, chl_mn_avg, chl_mn_std, yd_mn] = dy2wkmn_climatology(daily_chl, chl_years);
-% 
-% % and add the average from the tower/node big box for k-values:
-% 
-% k_avg=[]; chl_avgB=[];
-% for j=1:length(cast_days)
-%     jj=find(cast_record(ii,1)==cast_days(j));
-%     if ~isempty(jj)
-%         k_avg=[k_avg; unique(year_day(ii(jj))) nanmean(cast_record(ii(jj),2))];
-%         chl_avgB(j)=nanmean(chl_match(ii(jj),2));
-%     end
-% end
-% 
-% %
-% [~, is]=sort(k_avg(:,1));
-% k_avg=k_avg(is,:);
-% %
-% subplot(2,3,5,'replace'), hold on
-% [ax, h1, h2]=plotyy(yd_wk,chl_wk_avg,k_avg(:,1),-k_avg(:,2));
-% set(ax(1),'xlim',[1 366],'ycolor',[0 0.7 0],'fontsize',14)
-% set(ax(2),'xlim',[1 366],'ycolor',[0 0.5 1],'fontsize',14)
-% ylabel(ax(1),'Chlorophyll Avg')
-% ylabel(ax(2),'K')
-% set(h1,'color',[0 0.7 0],'marker','.','linewidth',2,'markersize',10)
-% set(h2,'color',[0 0.5 1],'marker','.','linewidth',2,'markersize',10)
-% xlabel('Year Day')
-% 
-% title('Weekly Chl avg, within day K avg')
-% 
-% %%
-% addpath /Users/kristenhunter-cevera/Documents/MATLAB/matlab_tools/export_fig_2016/
-% set(gcf,'color','w')
-% export_fig /Users/kristenhunter-cevera/Desktop/k-values.pdf
-% 
+[~,is]=sort(k_values(tn,2));
+[time_ktn, daily_ktn, ktn_years] = timeseries2ydmat(k_values(tn(is),2), -k_values(tn(is),5));
+[ktn_wk_avg, ktn_wk_std, ktn_yd_wk, ktn_mn_avg, ktn_mn_std, ktn_yd_mn] = dy2wkmn_climatology(daily_ktn, ktn_years);
+
+%%
+subplot(2,3,6,'replace')
+nn=find(~isnan(k_wk_avg));
+[ax, h1, h2]=plotyy(yd_wk,chl_wk_avg,k_yd_wk(nn),k_wk_avg(nn));
+hold(ax(2))
+hold(ax(1))
+set(ax(1),'xlim',[1 366],'ycolor',[0 0.7 0],'fontsize',14)
+set(ax(2),'xlim',[1 366],'ycolor',[0 0.5 1],'fontsize',14,'visible','on')
+ylabel(ax(1),'Chlorophyll Avg')
+ylabel(ax(2),'K')
+set(h1,'color',[0 0.7 0],'marker','.','linewidth',2,'markersize',10)
+set(h2,'color',[0 0.5 1],'marker','o','linestyle','none','markersize',8)
+xlabel('Year Day')
+ 
+h3=plot(ax(1),yd_wk,chltn_wk_avg,'.-','linewidth',2,'color',[0 0.3 0]);
+h4=plot(ax(2),ktn_yd_wk,ktn_wk_avg,'o','markersize',8,'color',[0 0.3 0]);
+
+legend([h1(1); h2(1); h3(1); h4(1)],'all chl','all k','tower/node chl','tower/node k')
+title('Weekly averages')
+
+%% save that figure!
+
+addpath /Users/kristenhunter-cevera/Documents/MATLAB/matlab_tools/export_fig_2016/
+set(gcf,'color','w')
+export_fig /Users/kristenhunter-cevera/MVCO_light_at_depth/PAR_k_values.pdf
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%K(LAMBDAS)...comparison with Morel...
+
+%So, each k at each wavelength was plotted against chl value and then a
+%power function was fit through it (after subtracting kw)...
+
+% import the values for comparison:
+filename = '/Users/kristenhunter-cevera/MVCO_light_at_depth/radiometer_src/Morel_Maritorena_2001_k_fits.txt';
+delimiter = '\t';
+formatSpec = '%f%f%f%f%[^\n\r]';
+fileID = fopen(filename,'r');
+dataArray = textscan(fileID, formatSpec, 'Delimiter', delimiter,  'ReturnOnError', false);
+fclose(fileID);
+
+Morel2001=cell2mat(dataArray(1:4));
+titles_Morel2001={'wavelength';'Kw';'e param';'chi param'};
+
+%% Ok, so let's see what those the Kbio looks like after has substracted Kw plotted against chlorophyll:
+%for first pass, just compare directly wiht Morel2001, but should try to calculate kw
+%directly from aw+1/2(bw)...
+rec=nan(106,9);
+for w=1:106%length(lambdas)
+    [~, im]=min(abs(Morel2001(:,1)-lambdas(w)));
+    k_bio=k_lambdas(:,w)-Morel2001(im,2);
+    
+    x=[ones(size(chl_match(:,2))) log(chl_match(:,2))];
+    y=log(k_bio);
+    [b,~,~,~,stats]=regress(y,x);
+    
+    if ~any(imag(b(:))) && ~any(isinf(b(:))) && ~any(isnan(b(:)))
+        rec(w,:)=[lambdas(w) Morel2001(im,1:4) b(1) b(2) stats(1) stats(3)];
+    end
+    %plot(chl_match(:,2),k_bio,'.')
+end
+
+%% hmmm...these plots look very, very different from Morel...
+
+plot(rec(:,2),rec(:,5),'.-') %Morel chi
+hold on
+plot(rec(:,2),rec(:,4),'.-') %Morel e
+
+plot(rec(:,1),exp(rec(:,6)),'.:') %mvco chi
+plot(rec(:,1),rec(:,7),'.:') %mvco e....

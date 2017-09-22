@@ -17,14 +17,28 @@ load(fullfile(sourcepath,'good_data_folders.mat'))
 
 %% right now, manually entered, but can put into a for loop
 
-foldernum=good_data(6);
+foldernum=good_data(15);
 load(fullfile(processed_path,datafolders{foldernum},['/mat_outfiles/data_' datafolders{foldernum} '.mat']))
 eval(['tempdata=data_' datafolders{foldernum} ';'])
 load(fullfile(processed_path,datafolders{foldernum},['/mat_outfiles/K_PAR_' datafolders{foldernum}]));
 eval(['K_PAR=K_PAR_' datafolders{foldernum} ';'])
+load(fullfile(processed_path,datafolders{foldernum},['/mat_outfiles/location_' datafolders{foldernum}]));
+eval(['location=location_' datafolders{foldernum} ';'])
 matsource=fullfile(processed_path,datafolders{foldernum},'/mat_outfiles/');
 
-%%
+%% plot station points:
+figure(7), clf
+figure(6), clf, hold on
+
+plot(-70.567,41.325,'o','markersize',16,'color',[0.5 0.5 0.5]) %tower
+plot(-70.555,41.335,'o','markersize',16,'color',[0.5 0.5 0.5]) %node
+plot(-70.6275,41.325,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+plot(-70.505,41.325,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+plot(-70.45,41.3275,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+plot(-70.567,41.255,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+plot(-70.567,41.2,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+plot(-70.567,41.145,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+
 for filenum=1:length(K_PAR); 
     %
     k_lambda(filenum).file=K_PAR(filenum).file;
@@ -80,8 +94,11 @@ for filenum=1:length(K_PAR);
         k_lambda(filenum).depth_index=impr;
         k_lambda(filenum).par_index=ipar;
         
-        figure(6), hold on
+        figure(7), hold on
         plot(k_wv(:,1),-k_wv(:,3),'.')
+        
+        figure(6), hold on
+        plot(location(filenum).lon,location(filenum).lat,'p','markersize',10)
         
     elseif K_PAR(filenum).flag==3; %split casts! Can look at both :)
         
@@ -133,21 +150,19 @@ for filenum=1:length(K_PAR);
         k_lambda(filenum).depth_index2=impr2;
         k_lambda(filenum).par_index1=ipar2; 
         
-        figure(6), hold on
+        figure(7), hold on
         plot(k_wv1(:,1),-k_wv1(:,3),'.')
         plot(k_wv2(:,1),-k_wv2(:,3),'.')
-    end
+        
+        figure(6), hold on
+        plot(location(filenum).lon,location(filenum).lat,'p','markersize',10)
+     end
     
     pause 
     
 end
 
-%%
 %save the attenuation fits:
 eval(['k_lambda_' datafolders{foldernum} '=k_lambda;'])
 eval(['save ' matsource 'k_lambda_' datafolders{foldernum} '.mat k_lambda_' datafolders{foldernum}])
-figure(6), clf
 clear k_lambda tempdata K_PAR mprtime edl_ind edl_PAR depth impr* ipar*
-
-
-

@@ -262,6 +262,35 @@ for foldernum=good_data(1)' %files that have data in them! Go through one by one
         
 end %foldernum
 
+%% OOPS - SHOULD HAVE PULLED OUT MVCO_EVENT NUM!
+
+%first, match each cast to an mvco event number (should have been
+%incorporated into the lat/lon processing, but can do it here:
+
+for foldernum=good_data' %folders with viable casts in them
+    
+    %load in all the data!
+    matsource=fullfile(processed_path,datafolders{foldernum},'/mat_outfiles/');
+    eval(['load ' matsource 'location_' datafolders{foldernum} '.mat'])
+    eval(['location=location_' datafolders{foldernum} ';'])
+    
+    for j=1:length(location)
+        if ~strcmp(location(j).notes,'empty_file')
+            eventnum=regexp(location(j).notes,'MVCO_\d{3}','match');
+            if ~isempty(eventnum)
+                location(j).eventnum=eventnum;
+            else
+                keyboard
+            end
+        end
+    end
+    
+    eval(['location_' datafolders{foldernum} '=location;'])
+    eval(['save ' matsource 'location_' datafolders{foldernum} ' location_' datafolders{foldernum}])
+    
+    clearvars location
+end
+
 
 %% And now a quick plot to show where the data is!
 
@@ -286,7 +315,7 @@ location_rec=location_rec(jj,:);
 %% and plot!
 
 clf
-plot(location_mat(:,2),location_mat(:,1),'.')
+plot(location_mat(:,2),location_mat(:,1),'.','markersize',12)
 
 %% hmmm, if some do look suspicious:
 
@@ -302,7 +331,7 @@ plot(x,y,'r.')
 % qq=find((1e-2)*floor(100*location_mat(:,2))==((1e-2)*floor(100*x(q))) & (1e-2)*floor(100*location_mat(:,1))==((1e-2)*floor(100*y(q))));
 % 
 % disp([location_rec{qq,1:2} location_rec{qq,4}])
-% 
+% % 
 % foldername=location_rec{qq,1};
 % eval(['templist={location_' foldername '(:).file}'';'])
 % 
