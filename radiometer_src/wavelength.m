@@ -185,14 +185,17 @@ end
 tn=find(wv_record(:,13)==3 | wv_record(:,13)==4);
 
 %%
-figure, hold on
+subplot(1,3,3,'replace'), hold on
 plot(wv_record(:,1),wv_record(:,8),'o','color',[0 0.7 0]) %4m max wv
 plot(wv_record(:,1),wv_record(:,10),'p','color',[0 0.5 1]) %8m max wv
 plot(wv_record(:,1),wv_record(:,12),'s','color',[0 0 0.8]) %12m max wv
 
+legend('4m','8m','12m')
 %hmmm - cool, looks like mainly steady at 540-560, but some interesting
 %features at 500? to explore more!
-
+set(gca,'box','on')
+xlabel('Year Day')
+ylabel('Max wavelength (nm)')
 %% fancier plot for time of year:
 
 figure, ylim([0 1.1]), hold on
@@ -204,11 +207,30 @@ for q=1:size(wv_record,1)
     pause(0.2)
 end
 
-
 %What I'd also like to do is record a set of casts, and then plot these
 %overlayed, color coded by time of year to identify any shifts??
 
+%% Or could make a 3D plot!
 
+%figure, 
+subplot(1,3,1,'replace')
+hold on, grid on
+cc=jet(366);
 
+[~,is]=sort(wv_record(:,1));
+for q=1:size(wv_record,1)
+    plot3(wv,wv_record(is(q),1)*ones(size(wv)),wv_spectra{is(q),1}./repmat(max(wv_spectra{is(q),1},[],2),1,size(wv_spectra{is(q),1},2)),'.-','color',cc(wv_record(is(q),1),:))
 
+    %plot(wv,wv_spectra{is(q),1}./repmat(max(wv_spectra{is(q),1},[],2),1,size(wv_spectra{is(q),1},2)),'.-','color',cc(wv_record(is(q),1),:))
+    %pause(0.2)
+end
 
+zlim([0 1.1])
+ylim([1 366])
+set(gca,'YDir','reverse')
+
+xlabel('Wavelength (nm)')
+ylabel('Year Day')
+zlabel('Relative distrbution')
+%view([32  34]) %for subplot2
+view([-24 42.8]) %for subplot1
