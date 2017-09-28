@@ -4,16 +4,21 @@
 %for calculating potential density (pressure affect removed):
 addpath /Users/kristenhunter-cevera/MVCO_light_at_depth/seawater_ver3_2/
 addpath /Users/kristenhunter-cevera/Documents/MATLAB/mvco_tools/
-mld2={};
+mldB={};
 plotflag=1;
 warning off
 
-mld_titles={'cast name'; 'file_time'; 'max N2'; 'depth of max N2'; 'stratified?'; ...
+mld_titlesB={'cast name'; 'file_time'; 'max N2'; 'depth of max N2'; 'mean N2'; ...
                 'closest depth to 4m'; 'N2 closest to 4m'; 'temperature closest to 4m'; 'pdens closest to 4m'; ... %depth, N2, temp and dens at 4m
                 'closest depth to 12m'; 'N2 closest to 12m'; 'temperature closest to 12m'; 'pdens closest to 12m'; 'upcast_flag';'manual edit'};  %depth, N2, temp and dens at 12m
           
+
+%mld_titles={'cast name'; 'file_time'; 'max N2'; 'depth of max N2'; 'stratified?'; ...
+%                 'closest depth to 4m'; 'N2 closest to 4m'; 'temperature closest to 4m'; 'pdens closest to 4m'; ... %depth, N2, temp and dens at 4m
+%                 'closest depth to 12m'; 'N2 closest to 12m'; 'temperature closest to 12m'; 'pdens closest to 12m'; 'upcast_flag';'manual edit'};  %depth, N2, temp and dens at 12m
+%           
 %%
-for q=90:length(mvco_ind);
+for q=45:length(mvco_ind);
     
     col_hdr=CTD(mvco_ind(q)).data_hdr;
     temp_data=CTD(mvco_ind(q)).data;
@@ -131,11 +136,16 @@ for q=90:length(mvco_ind);
             mm=mm(nn); is=is(nn); %to make indexing cleaner
             im=i3(is(1)); %index corresponds to max N2 value below 3 m...
             
+            %mean N2 over data:
+            avgN2=nanmean(N2(i3));
+            
             %and find the indicies for 4m and 12m (or closet depth):
             [d4,ii4]=min(abs(binned_data(:,1)-4));
             [d12,ii12]=min(abs(binned_data(:,1)-12));
             
         end
+        
+        % Hmm, need to add column of indexes, instabilities (N2 < 0) and median?
         
         if plotflag==1
             clf %see what this metric is highlighting - over all looks pretty good!
@@ -148,7 +158,7 @@ for q=90:length(mvco_ind);
             line(xlim,[4 4],'color',[0.5 0.5 0.5])
             set(gca,'ydir','reverse','fontsize',14)
             xlabel('Potential Density (kg/m^3)') %ylabel(col_hdr{6})
-            title([CTD(mvco_ind(q)).cast_name ':' datestr(file_time)],'interpreter','none')
+            title([CTD(mvco_ind(q)).cast_name ':' datestr(file_time) ' : ' num2str(q) ' out of ' num2str(length(mvco_ind))],'interpreter','none')
             %legend('Obs \rho','Potential \rho','location','NorthWest')
             
             subplot(2,3,2,'replace'), hold on
@@ -162,7 +172,9 @@ for q=90:length(mvco_ind);
             subplot(2,3,3,'replace'), hold on
             plot(N2D,binned_dataD(1:end-1,1),'.-','color',[0 0.5 1])
             plot(N2U,binned_dataU(1:end-1,1),'r.-','color',[1 0.5 0])
-            line([3e-4 3e-4], get(gca,'ylim'),'color','r') %anything higher than this and you are probably stratified
+            line([1e-4 1e-4], get(gca,'ylim'),'color','r') %anything higher than this and you are probably stratified
+            line([avgN2 avgN2], get(gca,'ylim'),'color','c') %average N2
+
             plot(N2(im),binned_dataD(im,1),'bp','markersize',12) %max only considering below 3.75m
             set(gca,'ydir','reverse','fontsize',14)
             xlabel('Brunt-Vaisala Freq')
@@ -202,28 +214,44 @@ for q=90:length(mvco_ind);
             
             %pause
         end %plotflag
-        
-        keyboard
-        
+               
         %Is the water stratified? Or wouldn't be well mixed?
         %Looking at Young-Oh's slide, it looks like the min would be around
         %.25 * 10^-4 N2 (S^{-2})...
         
         %mld2=[mld2; {CTD(mvco_ind(q)).cast_name} {file_time} {below3_N2(im)} {below3_bins(im})];
+            disp(['Max N2: ' num2str(N2(im))])
+            disp(['Avg N2: ' num2str(avgN2)])
+            
+        [Q] = input('Does the automatic finding of N2 look reasonable? If so, enter "auto", if not, enter "manual" \n');
         
-        if N2(im) <= 3e-4 %well mixed:
-            mld2=[mld2; {CTD(mvco_ind(q)).cast_name} {file_time} {N2(im)} {binned_data(im,1)} {'mixed'} ...
+        if strcmp(Q,'auto')
+        mldB=[mldB; {CTD(mvco_ind(q)).cast_name} {file_time} {N2(im)} {binned_data(im,1)} {avgN2} ...
                 {binned_data(ii4,1)} {N2(ii4)} {binned_data(ii4,4)} {binned_data(ii4,6)} ... %depth, N2, temp and dens at 4m
                 {binned_data(ii12,1)} {N2(ii12)} {binned_data(ii12,4)} {binned_data(ii12,6)} {upcast_flag} {'auto'}];  %depth, N2, temp and dens at 12m
-            disp('Mixed!')
-            disp(num2str(N2(im)))
-        else
-            mld2=[mld2; {CTD(mvco_ind(q)).cast_name} {file_time} {N2(im)} {binned_data(im,1)} {'stratified'} ...
-                {binned_data(ii4,1)} {N2(ii4)} {binned_data(ii4,4)} {binned_data(ii4,6)} ... %depth, N2, temp and dens at 4m
-                {binned_data(ii12,1)} {N2(ii12)} {binned_data(ii12,4)} {binned_data(ii12,6)} {upcast_flag} {'auto'}];  %depth, N2, temp and dens at 12m
-            disp('Stratified!')
-            disp(num2str(N2(im)))
+
+        elseif strcmp(Q,'manual')
+            disp('Please adjust and enter in data for mld cell array')
+            keyboard
+%          mldB=[mldB; {CTD(mvco_ind(q)).cast_name} {file_time} {N2(im)} {binned_data(im,1)} {avgN2} ...
+%                 {binned_data(ii4,1)} {N2(ii4)} {binned_data(ii4,4)} {binned_data(ii4,6)} ... %depth, N2, temp and dens at 4m
+%                 {binned_data(ii12,1)} {N2(ii12)} {binned_data(ii12,4)} {binned_data(ii12,6)} {upcast_flag} {'auto'}];  %depth, N2, temp and dens at 12m
+%      
         end
+            
+%         if N2(im) <= 3e-4 %well mixed:
+%             mldB=[mldB; {CTD(mvco_ind(q)).cast_name} {file_time} {N2(im)} {binned_data(im,1)} {'mixed'} ...
+%                 {binned_data(ii4,1)} {N2(ii4)} {binned_data(ii4,4)} {binned_data(ii4,6)} ... %depth, N2, temp and dens at 4m
+%                 {binned_data(ii12,1)} {N2(ii12)} {binned_data(ii12,4)} {binned_data(ii12,6)} {upcast_flag} {'auto'}];  %depth, N2, temp and dens at 12m
+%             disp('Mixed!')
+%             disp(num2str(N2(im)))
+%         else
+%             mldB=[mldB; {CTD(mvco_ind(q)).cast_name} {file_time} {N2(im)} {binned_data(im,1)} {'stratified'} ...
+%                 {binned_data(ii4,1)} {N2(ii4)} {binned_data(ii4,4)} {binned_data(ii4,6)} ... %depth, N2, temp and dens at 4m
+%                 {binned_data(ii12,1)} {N2(ii12)} {binned_data(ii12,4)} {binned_data(ii12,6)} {upcast_flag} {'auto'}];  %depth, N2, temp and dens at 12m
+%             disp('Stratified!')
+%             disp(num2str(N2(im)))
+%         end
           
         
         if any(diff(cast_time) < 0), disp('Something wrong with time sync?'), end
@@ -243,70 +271,84 @@ end %for loop
 %or not....
 
 %first remove empty rows where something went awry:
-mld=mld2;
+mld=mldB;
+jj=find(cellfun('isempty',mld(:,3))==0);
 %ii=find(cellfun('isempty',mld(:,7))==0 & cellfun('isempty',mld(:,8))==0 & cellfun('isempty',mld(:,9))==0 & cellfun('isempty',mld(:,10))==0);
-ii=find(abs(cell2mat(mld(:,10))-12) < 1);
+ii=find(abs(cell2mat(mld(jj,10))-12) < 1);
 
 %%
-mld2use=mld(ii,:);
-% ss=find(cellfun('isempty',regexp(mld2use(:,5),'stratified'))==0);
-% mm=find(cellfun('isempty',regexp(mld2use(:,5),'stratified'))==1);
+mldBuse=mld(jj(ii),:);
+% ss=find(cellfun('isempty',regexp(mldBuse(:,5),'stratified'))==0);
+% mm=find(cellfun('isempty',regexp(mldBuse(:,5),'stratified'))==1);
 
-ss=find(cell2mat(mld2use(:,3)) >= 1e-4);
-mm=find(cell2mat(mld2use(:,3)) < 1e-4);
+ss=find(cell2mat(mldBuse(:,3)) >= 1e-5);
+mm=find(cell2mat(mldBuse(:,3)) < 1e-5);
 
-
+%% by average:
+ss=find(cell2mat(mldBuse(:,5)) >= 1e-5);
+mm=find(cell2mat(mldBuse(:,5)) < 1e-5);
 %% diff in temp vs. diff in dens
 
 clf
 % subplot(2,4,1,'replace')
-% plot(cell2mat(mld2use(ss,2)),cell2mat(mld2use(ss,3)),'r.','markersize',12), hold on
-% plot(cell2mat(mld2use(mm,2)),cell2mat(mld2use(mm,3)),'b.','markersize',12)
+% plot(cell2mat(mldBuse(ss,2)),cell2mat(mldBuse(ss,3)),'r.','markersize',12), hold on
+% plot(cell2mat(mldBuse(mm,2)),cell2mat(mldBuse(mm,3)),'b.','markersize',12)
 % ylabel('Max N2 (s^{-2})')
 % line(xlim,[3e-4 3e-4],'color',[0.5 0.5 0.5])
 % datetick
 
 subplot(2,4,1,'replace')
-plot(find_yearday(cell2mat(mld2use(ss,2))),cell2mat(mld2use(ss,3)),'r.','markersize',12), hold on
-plot(find_yearday(cell2mat(mld2use(mm,2))),cell2mat(mld2use(mm,3)),'b.','markersize',12)
+plot(find_yearday(cell2mat(mldBuse(ss,2))),cell2mat(mldBuse(ss,3)),'r.','markersize',12), hold on
+plot(find_yearday(cell2mat(mldBuse(mm,2))),cell2mat(mldBuse(mm,3)),'b.','markersize',12)
 ylabel('Max N2 (s^{-2})')
-line(xlim,[3e-4 3e-4],'color',[0.5 0.5 0.5])
+xlim([0 365])
+xlabel('Yearday')
+line(xlim,[1e-4 1e-4],'color',[0.5 0.5 0.5])
 
 subplot(2,4,2,'replace')
-plot(cell2mat(mld2use(ss,2)),cell2mat(mld2use(ss,9))-cell2mat(mld2use(ss,13)),'r.','markersize',12), hold on
-plot(cell2mat(mld2use(mm,2))-cell2mat(mld2use(mm,12)),cell2mat(mld2use(mm,9))-cell2mat(mld2use(mm,13)),'b.','markersize',12)
+plot(cell2mat(mldBuse(ss,2)),cell2mat(mldBuse(ss,9))-cell2mat(mldBuse(ss,13)),'r.','markersize',12), hold on
+plot(cell2mat(mldBuse(mm,2))-cell2mat(mldBuse(mm,12)),cell2mat(mldBuse(mm,9))-cell2mat(mldBuse(mm,13)),'b.','markersize',12)
 ylabel('Density difference between 4m and 12m (\circC)')
 datetick
+set(gca,'xgrid','on')
 
-subplot(2,4,3,'replace')
-plot(cell2mat(mld2use(ss,9))-cell2mat(mld2use(ss,13)),cell2mat(mld2use(ss,3)),'r.','markersize',12), hold on
-plot(cell2mat(mld2use(mm,9))-cell2mat(mld2use(mm,13)),cell2mat(mld2use(mm,3)),'b.','markersize',12)
+subplot(2,4,7,'replace')
+plot(cell2mat(mldBuse(ss,9))-cell2mat(mldBuse(ss,13)),cell2mat(mldBuse(ss,3)),'r.','markersize',12), hold on
+plot(cell2mat(mldBuse(mm,9))-cell2mat(mldBuse(mm,13)),cell2mat(mldBuse(mm,3)),'b.','markersize',12)
 xlabel('Density difference between 4m and 12m (\circC)')
 ylabel('Max N2 (s^{-2})')
 
-subplot(2,4,4,'replace')
-plot(cell2mat(mld2use(ss,3)),cell2mat(mld2use(ss,4)),'r.','markersize',12), hold on
-plot(cell2mat(mld2use(mm,3)),cell2mat(mld2use(mm,4)),'b.','markersize',12)
+subplot(2,4,8,'replace')
+plot(cell2mat(mldBuse(ss,9))-cell2mat(mldBuse(ss,13)),cell2mat(mldBuse(ss,3)),'r.','markersize',12), hold on
+plot(cell2mat(mldBuse(mm,9))-cell2mat(mldBuse(mm,13)),cell2mat(mldBuse(mm,3)),'b.','markersize',12)
+xlabel('Density difference between 4m and 12m (\circC)')
+ylabel('Max N2 (s^{-2})')
+
+
+subplot(2,4,3,'replace')
+plot(cell2mat(mldBuse(ss,3)),cell2mat(mldBuse(ss,4)),'r.','markersize',12), hold on
+plot(cell2mat(mldBuse(mm,3)),cell2mat(mldBuse(mm,4)),'b.','markersize',12)
 xlabel('Max N2 (s^{-2})')
 ylabel('Depth of max N2 (m)')
 set(gca,'Ydir','reverse')
 
-subplot(2,4,5,'replace')
-plot(cell2mat(mld2use(ss,8))-cell2mat(mld2use(ss,12)),cell2mat(mld2use(ss,3)),'r.','markersize',12), hold on
-plot(cell2mat(mld2use(mm,8))-cell2mat(mld2use(mm,12)),cell2mat(mld2use(mm,3)),'b.','markersize',12)
+subplot(2,4,6,'replace')
+plot(cell2mat(mldBuse(ss,8))-cell2mat(mldBuse(ss,12)),cell2mat(mldBuse(ss,3)),'r.','markersize',12), hold on
+plot(cell2mat(mldBuse(mm,8))-cell2mat(mldBuse(mm,12)),cell2mat(mldBuse(mm,3)),'b.','markersize',12)
 xlabel('Temperature difference between 4m and 12m (\circC)')
 ylabel('Max N2 (s^{-2})')
 
-subplot(2,4,6,'replace')
-plot(cell2mat(mld2use(ss,8))-cell2mat(mld2use(ss,12)),cell2mat(mld2use(ss,9))-cell2mat(mld2use(ss,13)),'r.','markersize',12), hold on
-plot(cell2mat(mld2use(mm,8))-cell2mat(mld2use(mm,12)),cell2mat(mld2use(mm,9))-cell2mat(mld2use(mm,13)),'b.','markersize',12)
+subplot(2,4,5,'replace')
+plot(cell2mat(mldBuse(ss,8))-cell2mat(mldBuse(ss,12)),cell2mat(mldBuse(ss,9))-cell2mat(mldBuse(ss,13)),'r.','markersize',12), hold on
+plot(cell2mat(mldBuse(mm,8))-cell2mat(mldBuse(mm,12)),cell2mat(mldBuse(mm,9))-cell2mat(mldBuse(mm,13)),'b.','markersize',12)
 xlabel('Temperature difference between 4m and 12m (\circC)')
 ylabel('Density difference between 4m and 12m (\circC)')
 
-legend('N2 >= 3e-4', 'N2 < 3e-4')
+legend('N2 >= 1e-4', 'N2 < 1e-4')
 %%
-subplot(2,4,7,'replace')
-scatter(cell2mat(mld2use(:,8))-cell2mat(mld2use(:,12)),cell2mat(mld2use(:,9))-cell2mat(mld2use(:,13)),40,find_yearday(cell2mat(mld2use(:,2))),'filled')
+figure
+%subplot(2,4,7,'replace')
+scatter(cell2mat(mldBuse(:,8))-cell2mat(mldBuse(:,12)),cell2mat(mldBuse(:,9))-cell2mat(mldBuse(:,13)),40,find_yearday(cell2mat(mldBuse(:,2))),'filled')
 xlabel('Temperature difference between 4m and 12m (\circC)')
 ylabel('Density difference between 4m and 12m (\circC)')
 
@@ -321,18 +363,26 @@ colorbar
 %correlate to actual stratification?
 
 %Brunt Vaisala freq does show a nice correlation with density difference
-X=cell2mat(mld2use(:,13))-cell2mat(mld2use(:,9));
-Y=cell2mat(mld2use(:,3));
+X=cell2mat(mldBuse(:,9))-cell2mat(mldBuse(:,13));
+Y=cell2mat(mldBuse(:,3));
 nn=find(~isnan(X) & ~isnan(Y)); X=X(nn); Y=Y(nn);
 [B,BINT,~,~,STATS] = regress(Y,[ones(size(X)) X]); 
-plot(sort(X),B(1)+B(2)*sort(X),'r-')
 
-%Brunt Vaisala freq does show a nice correlation with density difference,
+subplot(2,4,7)
+plot(sort(X),B(1)+B(2)*sort(X),'k-')
+text(0,0.01,['R2: ' num2str(1e-3*round(1000*STATS(1)))])
+
+subplot(2,4,8)
+plot(sort(X),B(1)+B(2)*sort(X),'k-')
+
+
+%% Brunt Vaisala freq does show a nice correlation with density difference,
 %but even more beautiful relationship as log!
-X=cell2mat(mld2use(:,13))-cell2mat(mld2use(:,9)); %density difference
-Y=cell2mat(mld2use(:,3));
+X=cell2mat(mldBuse(:,13))-cell2mat(mldBuse(:,9)); %density difference
+Y=cell2mat(mldBuse(:,3));
 nn=find(~isnan(X) & ~isnan(Y)); X=X(nn); Y=Y(nn);
 [xmin,resnorm,residual] = lsqnonlin(@(theta) lsq_lightcurve(theta,X,Y),[-2 0.01],[-10 -100],[10 1000]);
+
 
 %%
 Y_hat=xmin(1)*(1-exp(xmin(2)*sort(X)));
@@ -340,131 +390,3 @@ Y_hat=xmin(1)*(1-exp(xmin(2)*sort(X)));
 %Y_hat=xmin(1)*(1-exp((xmin(2)./sort(X))));
 plot(sort(X),Y_hat,'r-')
 
-
-
-
-
-
-
-%%
-figure
-scatter(cell2mat(mld2use(ss,8))-cell2mat(mld2use(ss,12)),cell2mat(mld2use(ss,9))-cell2mat(mld2use(ss,13)),50,cell2mat(mld2use(ss,3)),'filled'), hold on
-scatter(cell2mat(mld2use(mm,8))-cell2mat(mld2use(mm,12)),cell2mat(mld2use(mm,9))-cell2mat(mld2use(mm,13)),50,cell2mat(mld2use(mm,3)),'filled')
-plot(cell2mat(mld2use(ss,8))-cell2mat(mld2use(ss,12)),cell2mat(mld2use(ss,9))-cell2mat(mld2use(ss,13)),'ro'), hold on
-plot(cell2mat(mld2use(mm,8))-cell2mat(mld2use(mm,12)),cell2mat(mld2use(mm,9))-cell2mat(mld2use(mm,13)),'bo')
-caxis([0 0.005])
-colorbar
-
-%%
-figure
-subplot(1,2,1,'replace')
-plot(cell2mat(mld2use(mm,9))-cell2mat(mld2use(mm,13)),cell2mat(mld2use(mm,3)),'bo')
-hold on
-plot(cell2mat(mld2use(ss,9))-cell2mat(mld2use(ss,13)),cell2mat(mld2use(ss,3)),'ro')
-xlabel('Density difference between 4m and 12m')
-ylabel('Max N2 somewhere along water column')
-ylim([0 0.012])
-
-subplot(1,2,2,'replace')
-plot(cell2mat(mld2use(mm,8))-cell2mat(mld2use(mm,12)),cell2mat(mld2use(mm,3)),'bo')
-hold on
-plot(cell2mat(mld2use(ss,8))-cell2mat(mld2use(ss,12)),cell2mat(mld2use(ss,3)),'ro')
-xlabel('Density difference between 4m and 12m')
-ylabel('Max N2 somewhere along water column')
-ylim([0 0.012])
-
-
-%% OLDER MATERIAL BEFORE JULY 2017:
-%% fancy plot:
-clf, hold on
-for q=1:length(mld)
-    plot(mld{q,2},mld{q,3},'b.','markersize',14)
-    if strcmp(mld(q,end),'up to')
-        line([mld{q,2} mld{q,2}],[mld{q,3} 16],'color',[1 0.3 0.3]) %up to
-    else
-        line([mld{q,2} mld{q,2}],[0 mld{q,3}],'color',[0.3 0.3 0.3])    %down to
-    end
-end
-datetick('x','mmm/yy')
-set(gca,'Ydir','reverse')
-
-%% we also need to extract temperature records at 4m and 12m...
-
-for q=1:length(mld)
-    
-    ind=mld{q,1}; %index into data
-    
-    col_hdr=hdr{ind};
-    temp_data=data{ind};
-    
-    
-    %unload variables from cell array:
-    depth=temp_data{1};
-    press=temp_data{2};
-    temperature=temp_data{3};
-    sal=temp_data{5};
-    dens=temp_data{6};
-    pdens=temp_data{end};
-    time=file_time{j,3};
-    
-    %find time
-    ii=find(cellfun('isempty',regexp(col_hdr,'Time, Elapsed'))==0);
-    cast_time=temp_data{ii};
-    
-    %Now to QC data:
-    %Remove any salinities with less than 25 ppt
-    %typically there is a time delay at the beginning before CTD starts
-    %dropping, go with data that's after at least a 30s delay...
-    %occasionally, there are time points out of order...resort
-    
-    %find descent:
-    smooth_depth=smooth(depth,200); %just a bit easier for direct logic tests
-    dc=find(diff(smooth_depth) > 0.0025); %falling
-    
-    %find longest continuous stretch-this should be the descent:
-    nonconsec=find(diff(dc)~=1); %find the values that are not contiguous
-    [mm, ind]=max(diff(nonconsec));
-    dsc_ind1=dc(nonconsec(ind)+1);
-    dsc_ind2=dc(nonconsec(ind+1));
-    dsc=dsc_ind1:dsc_ind2; %indexes for main descent
-    
-    %calc Brunt-Vaisala frequency to help determine MLD, but first bin
-    if ~isempty(dc)
-        
-        %for easier handling:
-        depthD=depth(dsc);
-        salD=sal(dsc);
-        temperatureD=temperature(dsc);
-        pressD=press(dsc);
-        pdensD=pdens(dsc);
-        cast_timeD=cast_time(dsc);
-        
-        ss=find(depthD>=4);
-        if ~isempty(ss)
-            mld{q,6}=temperatureD(ss(1));
-            mld{q,7}=pdensD(ss(1));
-        else
-            mld{q,6}=NaN;
-            mld{q,7}=NaN;
-        end
-        
-        qq=find(depthD>=12);
-        if ~isempty(qq)
-            mld{q,8}=temperatureD(qq(1));
-            mld{q,9}=pdensD(qq(1));
-        else
-            mld{q,8}=NaN;
-            mld{q,9}=NaN;
-        end
-    end
-end
-
-%%
-qq=find(cellfun(@(x) x< 14,mld(:,3))~=0); %something with a stratification happening!
-clf, hold on
-plot(cell2mat(mld(:,7))-cell2mat(mld(:,9)),cell2mat(mld(:,6))-cell2mat(mld(:,8)),'.','markersize',12)
-plot(cell2mat(mld(qq,7))-cell2mat(mld(qq,9)),cell2mat(mld(qq,6))-cell2mat(mld(qq,8)),'.','markersize',12)
-
-%%
-clf
-scatter(cell2mat(mld(:,7))-cell2mat(mld(:,9)),cell2mat(mld(:,6))-cell2mat(mld(:,8)),40,cell2mat(mld(:,3)),'filled')
