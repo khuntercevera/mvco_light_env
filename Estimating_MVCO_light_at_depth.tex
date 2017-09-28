@@ -92,6 +92,14 @@ The script \path{k_relationships.m} gives some nice overview plots of where we h
 
 \clearpage
 
+Another script \url{wavelength.m} looks at the color of light as it changes. For the most part, the light is indeed green, but the max wavelength reaching depths does shuffle about:
+ \begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{wavelengths.png}
+\caption{A) and B) showing wavelength profiles at 4m just from different views. Color coded by yearday. C) Wavelength at depth with maximum intensity.}
+\end{figure}
+
+
 \subsection{chl-to-fluorescence match}
 
 So, there seems to be a decent relationship between chl and k, but we only have chl values for specific dates. One way around this is to use fluorometer data as a proxy for chl and make a model from that to use in a yearday k-model
@@ -111,7 +119,7 @@ To do the later, we will use the Brunt-Vaisala frequency to try to calculate a m
 
  \subsection{CTD casts}
 
-The CTD casts are located in a folder at: \path{\\maddie\TaylorF\from_Samwise\data\MVCO\}. Some of these casts have been processed, but many have not. Of the casts that were processed, at this moment, it is unclear what parameters were used to do the binning and generate further products. So, in order to avoid that type of confusion, the script \path{ctd_raw2cnv_processing.m} searches for available CTD casts in the above folder and converts them to a .cnv file by calling the SeaBird SBE Data Processing software. The .cnv (text readable) files have been temporarily stored in: \path{\\sosiknas1\Lab\data\MVCO\processed\CTD\casts\}
+The CTD casts are located in a folder at: \path{\\maddie\TaylorF\from_Samwise\data\MVCO\}. Some of these casts have been processed, but many have not. Of the casts that were processed, at this moment, it is unclear what parameters were used to do the binning and generate further products. So, in order to avoid that type of confusion, the script \path{ctd_raw2cnv_processing.m} searches for available CTD casts in the above folder and converts them to a .cnv file by calling the SeaBird SBE Data Processing software. The .cnv (text readable) files have been temporarily stored in: \path{\\sosiknas1\Lab\data\MVCO\processed_CTD_casts\}
 
 %'\textbackslash \textbackslash sosiknas1\textbackslash Lab\_data\textbackslash MVCO\textbackslash processed\_CTD\_casts\textbackslash`
 
