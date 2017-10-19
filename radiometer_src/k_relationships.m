@@ -235,7 +235,7 @@ nn=find(~isnan(x) & ~isnan(y));
 plot(sort(x),X1(1)*sort(x).^X1(2),'-','color',[0 0 0])
 
 %just the tower and node:
-tn=find(k_values(:,8)==3 | k_values(:,8)==4);
+tn=find(k_values(:,8)==3 | k_values(:,8)==4); %tower or node values
 x = chl_match(tn,2);
 y = -k_values(tn,5);
 nn=find(~isnan(x) & ~isnan(y));
@@ -342,3 +342,74 @@ plot(rec(:,2),rec(:,4),'.-') %Morel e
 
 plot(rec(:,1),exp(rec(:,6)),'.:') %mvco chi
 plot(rec(:,1),rec(:,7),'.:') %mvco e....
+
+
+%% Interpolate avg k values for each day of year
+
+%for just tower and node now:
+%and the spline through those:
+nn=find(~isnan(ktn_wk_avg));
+%YY = spline(ktn_yd_wk(nn),ktn_wk_avg(nn),1:366);
+YY=interp1(ktn_yd_wk(nn),ktn_wk_avg(nn),1:366);
+figure, hold on
+
+%light gray vertical lines for each sampling day:
+xlim([1 366]); ylim([0.15 0.5])
+unqdays=unique(k_values(:,1));
+for q=1:length(unqdays)
+    line([unqdays(q) unqdays(q)],ylim,'color',[0.6 0.6 0.6])
+end
+ii=find(k_values(:,8)==3 | k_values(:,8)==4);
+scatter(k_values(ii,1),-k_values(ii,5),30,k_values(ii,8),'filled')
+caxis([0 8]), colorbar
+set(gca,'fontsize',14,'box','on')
+ylabel('Attenuation coefficient, K')
+xlabel('Year Day')
+xlim([1 366])
+title('k for just tower and node locations')
+
+plot(ktn_yd_wk(nn),ktn_wk_avg(nn),'o','markerfacecolor',[0.5 0.5 0.5]) 
+plot(1:366,YY,'-','color',[0.5 0.5 0.5])
+
+%% Comparison with syn stuff!
+
+load('/Users/kristenhunter-cevera/Documents/MATLAB/MVCO_Syn_analysis/mvco_envdata_16Aug2016.mat')
+load('/Users/kristenhunter-cevera/Documents/MATLAB/MVCO_Syn_analysis/syndata_04Jan2017.mat')
+
+figure, plot(1:366, light_avg,'.-'), hold on
+E_d = light_avg.*exp(4*-YY');
+plot(1:366,E_d,'.-')
+
+%%
+figure
+plot(Tcorr_avg, mu_avg,'o')
+
+%%
+clf
+% subplot(1,2,1,'replace')
+% scatter(light_avg, mu_avg,30,ydmu,'filled')
+% subplot(1,2,2,'replace')
+% scatter(E_d, mu_avg,30,ydmu,'filled')
+
+subplot(1,2,1,'replace')
+scatter(light_avg, mu_avg,30,Tcorr_avg,'filled')
+caxis([-2 22])
+colormap jet
+subplot(1,2,2,'replace')
+scatter(E_d, mu_avg,30,Tcorr_avg,'filled')
+caxis([-2 22])
+%%
+figure
+% subplot(1,2,1,'replace')
+% scatter(light_avg, PE_avg,30,ydmu,'filled')
+% subplot(1,2,2,'replace')
+% scatter(E_d, PE_avg,30,ydmu,'filled')
+
+subplot(1,2,1,'replace')
+scatter(light_avg, PE_avg,30,Tcorr_avg,'filled')
+colormap jet
+caxis([-2 22])
+subplot(1,2,2,'replace')
+scatter(E_d, PE_avg,30,Tcorr_avg,'filled')
+caxis([-2 22])
+colorbar
