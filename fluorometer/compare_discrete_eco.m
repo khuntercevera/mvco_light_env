@@ -86,6 +86,7 @@ for q=1:length(dat)
     end
 end
 
+%deploy_match=[date 'Deployment Number' 'Serial number' 'Calibration']
 %% internal run code:
 
  deploy_match((deploy_match(:,3)==24),5)=1;
@@ -101,8 +102,9 @@ end
  
 scatter(dat(:,1), dat(:,7), 40, deploy_match(:,5),'filled')
 
-
-
+colormap jet
+colorbar
+title('By different serial number')
 %%
 load /Users/kristenhunter-cevera/MVCO_light_at_depth/fluorometer/CHLatASIT.mat %load discrete sample extracted chl results
 hold on
@@ -162,6 +164,7 @@ ylim([0 4])
 set(gca, 'xgrid', 'on')
 line(xlim, [1 1])
 ylabel('Chl eco/discrete-fl')
+
 
 %load DailySolar %MJ m^-2
 %yd = (1:365)';
@@ -332,7 +335,7 @@ ecoday_std=nanstd(dy_ecoday,0,2);
 
 %% finally the plot...
 
-clf
+figure
 subplot(3,3,1,'replace'), hold on
 plot(total_match(:,3),total_match(:,4),'.','markersize',8)
 %plot(total_match(:,7),total_match(:,8),'.','markersize',8)
@@ -441,8 +444,22 @@ set(gca,'box','on')
 title('extracted fl data plus daily estimated medians')
 %% hmmm, maybe a three panel figure would be helpful?
 
+%matching color code:
+clf
+subplot(2,3,1,'replace')
+[y,m,d,h,mi,s] = datevec(FL_matdate);
+scatter(FL_matdate-datenum(y,1,0), ecochl_match(:,1)./FL_chl(:,1), 30,FL_matdate-datenum(y,1,0),'filled') %night before
+hold on
+scatter(FL_matdate-datenum(y,1,0), ecochl_match(:,2)./FL_chl(:,1),30,FL_matdate-datenum(y,1,0)) %night after
+ylim([0 4]), xlim([0 365])
+line([0 365], [1 1])
+ylabel('Chl eco/discrete-fl')
+xlabel('Year day')
+legend('night before', 'night after')
 colormap jet
-subplot(1,3,1,'replace'), hold on
+set(gca,'box','on')
+
+subplot(2,3,4,'replace'), hold on
 scatter(total_match(:,2), nanmean(total_match(:,3:4),2),20,total_match(:,12),'filled')
 %scatter(total_match(:,6), nanmean(total_match(:,7:8),2),30,total_match(:,12),'filled')
 ylabel('Chl (mg m^{-3}), est. in situ (mean btw nights)')
@@ -453,14 +470,15 @@ ylabel(hbar,'Year Day')
 title('by year day')
 set(gca,'box','on')
 
+%% By yearday sections:
 y=nanmean(total_match(:,3:4),2);
 
-k1=find(total_match(:,12) > 90 & total_match(:,12) < 240);
+k1=find(total_match(:,12) > 100 & total_match(:,12) < 320);
 %to_exclude=find(y > 5 & total_match(:,2) < 2);
 %k1=setxor(to_exclude,k);
 k2=setxor(k1,1:length(total_match(:,1)));
 
-subplot(1,3,2,'replace')
+subplot(2,3,2,'replace')
 scatter(total_match(k1,2), nanmean(total_match(k1,3:4),2),20,total_match(k1,12),'filled')
 caxis([0 366])
 ylim([0 25])
@@ -468,14 +486,42 @@ xlim([0 12])
 ylabel('Chl (mg m^{-3}), est. in situ (mean btw nights)')
 xlabel('Chl (mg m^{-3}), FL extract')
 set(gca,'box','on')
+title('Yearday 100-325')
 
-subplot(1,3,3,'replace')
+subplot(2,3,3,'replace')
 scatter(total_match(k2,2), nanmean(total_match(k2,3:4),2),20,total_match(k2,12),'filled')
 caxis([0 366])
 ylabel('Chl (mg m^{-3}), est. in situ (mean btw nights)')
 xlabel('Chl (mg m^{-3}), FL extract')
 set(gca,'box','on')
+title('Yearday 326-99')
+
 %%
+k1=find(total_match(:,12) > 250 | total_match(:,12) < 20);
+%to_exclude=find(y > 5 & total_match(:,2) < 2);
+%k1=setxor(to_exclude,k);
+k2=setxor(k1,1:length(total_match(:,1)));
+
+subplot(2,3,5,'replace')
+scatter(total_match(k1,2), nanmean(total_match(k1,3:4),2),20,total_match(k1,12),'filled')
+caxis([0 366])
+ylim([0 25])
+xlim([0 12])
+ylabel('Chl (mg m^{-3}), est. in situ (mean btw nights)')
+xlabel('Chl (mg m^{-3}), FL extract')
+set(gca,'box','on')
+title('Yearday 250-20')
+
+%%
+subplot(2,3,6,'replace')
+scatter(total_match(k2,2), nanmean(total_match(k2,3:4),2),20,total_match(k2,12),'filled')
+caxis([0 366])
+ylabel('Chl (mg m^{-3}), est. in situ (mean btw nights)')
+xlabel('Chl (mg m^{-3}), FL extract')
+set(gca,'box','on')
+title('Yearday 21-249')
+
+%% line fitting:
 subplot(1,3,2,'replace')
 plot(total_match(k1,2), nanmean(total_match(k1,3:4),2),'.'), hold on
 x=[ones(size(total_match(k1,2))) total_match(k1,2)];
