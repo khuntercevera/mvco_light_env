@@ -36,9 +36,7 @@ for foldernum=good_data' %are these the ones with lat/lon?
     eval(['load ' matsource 'location_' datafolders{foldernum} '.mat'])
     eval(['location=location_' datafolders{foldernum} ';'])
     
-    eval(['load ' matsource 'k_lambda_' datafolders{foldernum} '.mat'])
-    eval(['k_lambda=k_lambda_' datafolders{foldernum} ';'])
-    
+   
     % because some of the casts were split, need to account for this:
     for filenum=1:length(K_PAR);
         
@@ -48,6 +46,7 @@ for foldernum=good_data' %are these the ones with lat/lon?
             wv=tempdata(filenum).wavelen_downwell;
             edl=tempdata(filenum).adj_edl;
             depth=tempdata(filenum).depth;
+            time=tempdata(filenum).mprtime;
             edl_ind=tempdata(filenum).edl_ind;
             esl_ind=tempdata(filenum).esl_ind;
             
@@ -59,7 +58,7 @@ for foldernum=good_data' %are these the ones with lat/lon?
                 impr=K_PAR(filenum).depth_index;
                 ipar=K_PAR(filenum).par_index;
                 
-            elseif K_PAR(filenum).flag==3;
+            elseif K_PAR(filenum).flag==3; %k-par was piecewise linear, only investigate first fit
                 
                 impr=K_PAR(filenum).depth_index1;
                 ipar=K_PAR(filenum).par_index1;
@@ -130,6 +129,7 @@ for foldernum=good_data' %are these the ones with lat/lon?
                 plot(time(impr),depth(impr),'.','markersize',12)
                 set(gca,'YDir','reverse')
                 datetick
+                title(['File: ' num2str(filenum) ' out of ' num2str(length(K_PAR)) ],'Interpreter','none')
                 
                 subplot(1,4,2,'replace'), hold on
                 plot(wv_sol,esl,'-','color',[0.5 0.5 0.5])
@@ -234,3 +234,10 @@ ylabel('Year Day')
 zlabel('Relative distrbution')
 %view([32  34]) %for subplot2
 view([-24 42.8]) %for subplot1
+
+
+%% And now, let's look at individual wavelength attentuation relationships with chlorophyll...
+
+%A better comparison with Morel?
+
+
