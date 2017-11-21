@@ -1,37 +1,9 @@
+%load in all necessary files:
+
 load /Users/kristenhunter-cevera/MVCO_light_at_depth/fluorometer/ecochl_all.mat %load all in situ fluorometer results (ecofl series sensors)
-%%
-figure
-plot(dat(:,1), dat(:,7), 'c-', 'linewidth', 2)
-ylim([0 15])
-datetick('x')
-[y,m,d,h,mi,s] = datevec(dat(:,1));
-ind_night = find(h < 9); %UTC hours for middle of local night
-ind_midday = find(h >= 14 & h <= 18); %UTC hours for mid-day local
-hold on
-plot(dat(ind_night,1), dat(ind_night,7), 'b.')
-plot(dat(ind_midday,1), dat(ind_midday,7), 'g.')
-ylabel('Chl (mg m^{-3})')
+load /Users/kristenhunter-cevera/MVCO_light_at_depth/fluorometer/CHLatASIT.mat %load discrete sample extracted chl results
 
-%% calculate the mean and std dev for values each night and each mid-day
-day = floor(dat(:,1));
-unqdays = unique(day);
-ecochl_mean  = NaN(length(unqdays),2);
-ecochl_std  = ecochl_mean;
-for count = 1:length(unqdays),
-    ind = find(day == unqdays(count) & h < 9);
-    ecochl_mean(count,1) = nanmean(dat(ind,7)); %night
-    ecochl_std(count,1) = nanstd(dat(ind,7),0,1);    
-    ind = find(day == unqdays(count) & h <= 16 & h >= 14);
-    ecochl_mean(count,2) = nanmean(dat(ind,7)); %mid-day
-    ecochl_std(count,2) = nanstd(dat(ind,7),0,1);
-end;
-
-plot(unqdays+1/6, ecochl_mean(:,1), 'b^', 'markerfacecolor', 'b')
-plot(unqdays+2/3, ecochl_mean(:,2), 'g^', 'markerfacecolor', 'g')
-
-
-%% Now, load in the fluorometer deployments to see if any went awry:
-
+% Now, load in the fluorometer deployment info:
 filename = '/Users/kristenhunter-cevera/MVCO_light_at_depth/fluorometer/Fluor_MVCO_deploy_matlab_readable.txt';
 delimiter = '\t';
 startRow = 2;
@@ -40,9 +12,8 @@ fileID = fopen(filename,'r');
 dataArray = textscan(fileID, formatSpec, 'Delimiter', delimiter, 'HeaderLines' ,startRow-1, 'ReturnOnError', false);
 fclose(fileID);
 
-%% reorganize into matrix:
+% reorganize into matrix:
 fluor_deployment_titles={'Deployment Number';'Serial number';'Date In';'Date Out';'Calibration'};
-
 fluor_deployment=cell(33,5);
 
 temp=str2num(char(dataArray{:,1}));
@@ -67,7 +38,40 @@ for j=1:33 %predetermined :)
     fluor_deployment{j,5}=datenum(char(dataArray{5}(jj(1))));
 end
 
-%% and now color coded figure! 
+
+%%
+figure
+plot(dat(:,1), dat(:,7), 'c-', 'linewidth', 2)
+ylim([0 15])
+datetick('x')
+[y,m,d,h,mi,s] = datevec(dat(:,1));
+ind_night = find(h < 9); %UTC hours for middle of local night
+ind_midday = find(h >= 14 & h <= 18); %UTC hours for mid-day local
+hold on
+plot(dat(ind_night,1), dat(ind_night,7), 'b.')
+plot(dat(ind_midday,1), dat(ind_midday,7), 'g.')
+ylabel('Chl (mg m^{-3})')
+
+% calculate the mean and std dev for values each night and each mid-day
+day = floor(dat(:,1));
+unqdays = unique(day);
+ecochl_mean  = NaN(length(unqdays),2);
+ecochl_std  = ecochl_mean;
+for count = 1:length(unqdays),
+    ind = find(day == unqdays(count) & h < 9);
+    ecochl_mean(count,1) = nanmean(dat(ind,7)); %night
+    ecochl_std(count,1) = nanstd(dat(ind,7),0,1);    
+    ind = find(day == unqdays(count) & h <= 16 & h >= 14);
+    ecochl_mean(count,2) = nanmean(dat(ind,7)); %mid-day
+    ecochl_std(count,2) = nanstd(dat(ind,7),0,1);
+end;
+
+plot(unqdays+1/6, ecochl_mean(:,1), 'b^', 'markerfacecolor', 'b')
+plot(unqdays+2/3, ecochl_mean(:,2), 'g^', 'markerfacecolor', 'g')
+
+
+
+% and now color coded figure! 
 %organize by deployment, by calibration or by serial number
 %do this by creating a matching matrix of values:
 
@@ -117,9 +121,9 @@ end
  deploy_match((deploy_match(:,3)== 962),5)=10; 
  
 %deploy_match=[hour-date 'Deployment Number' 'Serial number' 'Calibration']
-%% internal run code:
+%% color coded by insturment and blocks of deployments:
 
-clf, hold on
+figure, hold on
 
 %background deployment patches:
 for q=1:2:length(fluor_deployment)
@@ -135,7 +139,6 @@ for q=2:2:length(fluor_deployment)
     patch(x,y,[0.55 0.55 0.55],'linestyle','none')
     text((fluor_deployment{q,7}-fluor_deployment{q,6})/2+fluor_deployment{q,6}-1,-1,num2str(fluor_deployment{q,1}))
 end
-
 
 plot(dat(:,1), dat(:,7), '-', 'linewidth', 1,'color',[0 0 0])
 %ylim([0 15])
@@ -154,13 +157,13 @@ ylabel('Chl (mg m^{-3})')
 
 %% EXTRACTED CHL VALUES TO MATCH!
 
-load /Users/kristenhunter-cevera/MVCO_light_at_depth/fluorometer/CHLatASIT.mat %load discrete sample extracted chl results
-
-%% plot extracts on top:
+% plot extracts on top:
 h1=plot(FL_matdate, FL_chl(:,1), 'o','color',[0 0 0],'markerfacecolor',[0 0.8 0]); %fluorometric analysis of extracts
 h2=plot(HPLC_matdate, HPLC_chl(:,1), 'o','color',[0 0 0],'markerfacecolor',[0 1 1]); %fluorometric analysis of extracts
 
 legend([h1(1); h2(1)], 'Extracted, Fl Chl','HPLC Chl')
+
+
 %%
 figure
 hold on
