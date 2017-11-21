@@ -1,5 +1,6 @@
 load /Users/kristenhunter-cevera/MVCO_light_at_depth/fluorometer/ecochl_all.mat %load all in situ fluorometer results (ecofl series sensors)
 %%
+figure
 plot(dat(:,1), dat(:,7), 'c-', 'linewidth', 2)
 ylim([0 15])
 datetick('x')
@@ -11,7 +12,7 @@ plot(dat(ind_night,1), dat(ind_night,7), 'b.')
 plot(dat(ind_midday,1), dat(ind_midday,7), 'g.')
 ylabel('Chl (mg m^{-3})')
 
-%calculate the mean and std dev for values each night and each mid-day
+%% calculate the mean and std dev for values each night and each mid-day
 day = floor(dat(:,1));
 unqdays = unique(day);
 ecochl_mean  = NaN(length(unqdays),2);
@@ -67,28 +68,43 @@ for j=1:33 %predetermined :)
 end
 
 %% and now color coded figure! 
-%can organize by deployment, by calibration or by serial number
+%organize by deployment, by calibration or by serial number
 %do this by creating a matching matrix of values:
 
-deploy_match=nan(length(dat),3);
-for q=1:length(dat)
+deploy_match=nan(length(dat),3); %~roughly hourly data...
+fluor_deployment(:,6:7)=fluor_deployment(:,3:4);
+
+for q=1:length(fluor_deployment)   
+      
+    %separate cases for when same day recover and deploy:
     
-    deploy_match(q,1)=dat(q,1);
+    ii=find(dat(:,1) >= fluor_deployment{q,3} & dat(:,1) <= fluor_deployment{q,4}+1); %in between begin and end deployments
     
-    ii=find(dat(q,1) >= cell2mat(fluor_deployment(:,3)) & dat(q,1) <= cell2mat(fluor_deployment(:,4)));
-    
-    if length(ii) == 1
-        deploy_match(q,2)=fluor_deployment{ii,1};
-        deploy_match(q,3)=str2num(char(regexp(fluor_deployment{ii,2},'\d{3}','match')));
-        deploy_match(q,4)=fluor_deployment{ii,5};
-    elseif length(ii) > 1
-        keyboard
+    jj=find(ismember(dat(ii,1),deploy_match(:,1)));
+    if ~isempty(jj) %if you have already recorded this data as belonging to another deployment
+        %keyboard
+        %easy fix, if no large differences, then that data belongs to the
+        %currently evaluated deployment...
+        if any(diff(dat(ii(jj))) > 0.1)
+            %keyboard
+            [mm,im]=max(diff(dat(ii(jj)))); %find the max time difference
+            ii=ii(jj(im)+1:end); %split at this difference
+            disp(['q: ' num2str(q) ' max diff: ' num2str(mm)])
+            %'actual' start/end of deployments:
+            fluor_deployment{q,6}=dat(ii(1),1); %start of this deployment
+            fluor_deployment{q-1,7}=dat(ii(1),1); %end of last one
+        end
     end
+    
+    deploy_match(ii,1)=dat(ii,1); %matching hour for data;
+    deploy_match(ii,2) = fluor_deployment{q,1}; %deployment number
+    deploy_match(ii,3)=str2num(char(regexp(fluor_deployment{q,2},'\d{3}','match'))); %serial number
+    deploy_match(ii,4)=fluor_deployment{q,5}; %calibration
+    
+    
 end
 
-%deploy_match=[date 'Deployment Number' 'Serial number' 'Calibration']
-%% internal run code:
-
+%make the serial numbers easier to handle:
  deploy_match((deploy_match(:,3)==24),5)=1;
  deploy_match((deploy_match(:,3)==42),5)=2;  
  deploy_match((deploy_match(:,3)==256),5)=3;    
@@ -100,11 +116,50 @@ end
  deploy_match((deploy_match(:,3)==960),5)=9;      
  deploy_match((deploy_match(:,3)== 962),5)=10; 
  
-scatter(dat(:,1), dat(:,7), 40, deploy_match(:,5),'filled')
+%deploy_match=[hour-date 'Deployment Number' 'Serial number' 'Calibration']
+%% internal run code:
 
-colormap jet
+figure, hold on
+
+%background deployment patches:
+for q=1:2:length(fluor_deployment)
+    x=[fluor_deployment{q,6} fluor_deployment{q,7} fluor_deployment{q,7} fluor_deployment{q,6}];
+    y=[0 0 50 50];
+    patch(x,y,[0.7 0.7 0.7],'linestyle','none')
+    text((fluor_deployment{q,7}-fluor_deployment{q,6})/2+fluor_deployment{q,6}-1,-1,num2str(fluor_deployment{q,1}))
+end
+
+for q=2:2:length(fluor_deployment)
+    x=[fluor_deployment{q,6} fluor_deployment{q,7} fluor_deployment{q,7} fluor_deployment{q,6}];
+    y=[0 0 50 50];
+    patch(x,y,[0.3 0.3 0.3],'linestyle','none')
+    text((fluor_deployment{q,7}-fluor_deployment{q,6})/2+fluor_deployment{q,6}-1,-1,num2str(fluor_deployment{q,1}))
+end
+
+
+plot(dat(:,1), dat(:,7), '-', 'linewidth', 2,'color',[0 0 0])
+%ylim([0 15])
+datetick('x')
+
+scatter(dat(:,1), dat(:,7), 40, deploy_match(:,5),'filled') %serial number
+cmap=jet(10);
+cmap=cmap([1 3:10],:); %too much blue;
+cmap=[cmap; 1 0 0];
+colormap(cmap)
 colorbar
 title('By different serial number')
+
+%% with lines for the different deployments:
+
+% for q=1:length(fluor_deployment)
+%     line([fluor_deployment{q,3} fluor_deployment{q,3}],ylim,'color','b')
+%     line([fluor_deployment{q,4} fluor_deployment{q,4}],ylim,'linestyle','--','color','b')
+% end
+
+%% better with patches:
+
+
+
 %%
 load /Users/kristenhunter-cevera/MVCO_light_at_depth/fluorometer/CHLatASIT.mat %load discrete sample extracted chl results
 hold on
@@ -522,6 +577,7 @@ set(gca,'box','on')
 title('Yearday 21-249')
 
 %% line fitting:
+figure
 subplot(1,3,2,'replace')
 plot(total_match(k1,2), nanmean(total_match(k1,3:4),2),'.'), hold on
 x=[ones(size(total_match(k1,2))) total_match(k1,2)];
