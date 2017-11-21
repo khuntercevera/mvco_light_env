@@ -119,29 +119,29 @@ end
 %deploy_match=[hour-date 'Deployment Number' 'Serial number' 'Calibration']
 %% internal run code:
 
-figure, hold on
+clf, hold on
 
 %background deployment patches:
 for q=1:2:length(fluor_deployment)
     x=[fluor_deployment{q,6} fluor_deployment{q,7} fluor_deployment{q,7} fluor_deployment{q,6}];
     y=[0 0 50 50];
-    patch(x,y,[0.7 0.7 0.7],'linestyle','none')
+    patch(x,y,[0.8 0.8 0.8],'linestyle','none')
     text((fluor_deployment{q,7}-fluor_deployment{q,6})/2+fluor_deployment{q,6}-1,-1,num2str(fluor_deployment{q,1}))
 end
 
 for q=2:2:length(fluor_deployment)
     x=[fluor_deployment{q,6} fluor_deployment{q,7} fluor_deployment{q,7} fluor_deployment{q,6}];
     y=[0 0 50 50];
-    patch(x,y,[0.3 0.3 0.3],'linestyle','none')
+    patch(x,y,[0.55 0.55 0.55],'linestyle','none')
     text((fluor_deployment{q,7}-fluor_deployment{q,6})/2+fluor_deployment{q,6}-1,-1,num2str(fluor_deployment{q,1}))
 end
 
 
-plot(dat(:,1), dat(:,7), '-', 'linewidth', 2,'color',[0 0 0])
+plot(dat(:,1), dat(:,7), '-', 'linewidth', 1,'color',[0 0 0])
 %ylim([0 15])
 datetick('x')
 
-scatter(dat(:,1), dat(:,7), 40, deploy_match(:,5),'filled') %serial number
+scatter(dat(:,1), dat(:,7), 20, deploy_match(:,5),'filled') %serial number
 cmap=jet(10);
 cmap=cmap([1 3:10],:); %too much blue;
 cmap=[cmap; 1 0 0];
@@ -149,19 +149,20 @@ colormap(cmap)
 colorbar
 title('By different serial number')
 
-%% with lines for the different deployments:
+ylim([-2 50])
+ylabel('Chl (mg m^{-3})')
 
-% for q=1:length(fluor_deployment)
-%     line([fluor_deployment{q,3} fluor_deployment{q,3}],ylim,'color','b')
-%     line([fluor_deployment{q,4} fluor_deployment{q,4}],ylim,'linestyle','--','color','b')
-% end
+%% EXTRACTED CHL VALUES TO MATCH!
 
-%% better with patches:
-
-
-
-%%
 load /Users/kristenhunter-cevera/MVCO_light_at_depth/fluorometer/CHLatASIT.mat %load discrete sample extracted chl results
+
+%% plot extracts on top:
+h1=plot(FL_matdate, FL_chl(:,1), 'o','color',[0 0 0],'markerfacecolor',[0 0.8 0]); %fluorometric analysis of extracts
+h2=plot(HPLC_matdate, HPLC_chl(:,1), 'o','color',[0 0 0],'markerfacecolor',[0 1 1]); %fluorometric analysis of extracts
+
+legend([h1(1); h2(1)], 'Extracted, Fl Chl','HPLC Chl')
+%%
+figure
 hold on
 plot(FL_matdate, FL_chl(:,1), 'r*') %fluorometric analysis of extracts
 ylabel('Chl (mg m^{-3})')
