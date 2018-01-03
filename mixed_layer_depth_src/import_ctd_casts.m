@@ -12,8 +12,8 @@ temp=regexp(filenames,'\.cnv'); %find only the .cnv files
 ii=find(cellfun('isempty',temp)==0);
 filenames=filenames(ii)';
 
-%find the Tioga folders:
-%ii=find(cellfun('isempty',strfind(folder_names','Tioga'))==0);
+%% find the Tioga folders:
+% ii=find(cellfun('isempty',strfind(folder_names','Tioga'))==0);
 load(fullfile(pathname,'list_and_location_of_raw_ctd_files.mat'))
 
 CTD=struct('cast_name',{},'file_location',{},'lat',{},'lon',{},'UTC',{},'upload_time',{},'col_headers',{},'data',{});
@@ -65,7 +65,7 @@ end
 %% How many files don't have lat/lon?
 
 ii=find(cellfun('isempty',{CTD(:).lat}')==1);
-{CTD(ii).cast_name}';
+{CTD(ii).cast_name}'
 %Okay, only about 8 or so actual cruises where we are missing this data...
 
 

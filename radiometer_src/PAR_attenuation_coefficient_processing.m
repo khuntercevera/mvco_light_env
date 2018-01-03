@@ -318,7 +318,7 @@ load(fullfile(sourcepath,'good_data_folders.mat'))
 
 clearvars K_PAR tempdata
 
-foldernum=good_data(15);
+foldernum=good_data(14);
 load(fullfile(processed_path,datafolders{foldernum},['/mat_outfiles/data_' datafolders{foldernum} '.mat']))
 eval(['tempdata=data_' datafolders{foldernum} ';'])
 load(fullfile(processed_path,datafolders{foldernum},['/mat_outfiles/K_PAR_' datafolders{foldernum}]));
@@ -360,6 +360,8 @@ for filenum=1:length(K_PAR);
         title(['Folder: ' num2str(foldernum) ', File: ' num2str(filenum) ' out of ' num2str(length(K_PAR)) '; ' filename])
         xl=get(gca,'xlim');  yl=get(gca,'ylim');
         text(0.80*diff(xl)+xl(1),0.95*diff(yl)+yl(1),{['K: ' num2str(K(2))];['R2: ' num2str(STATS(1))] })
+        ylabel('Depth')
+        xlabel('log PAR')
         
         pause
         clf

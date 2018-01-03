@@ -121,7 +121,7 @@ end
 scatter(k_values(:,4),k_values(:,3),30,k_values(:,8),'filled')
 set(gca,'box','on','fontsize',14)
 xlabel('Longitude')
-ylabel('latitude')
+ylabel('Latitude')
 %excellent - just the one outlier!
 
 %% now examine k, by yearday, location, etc...
@@ -454,7 +454,12 @@ xlim([400 700])
 %and the spline through those:
 nn=find(~isnan(ktn_wk_avg));
 %YY = spline(ktn_yd_wk(nn),ktn_wk_avg(nn),1:366);
-YY=interp1(ktn_yd_wk(nn),ktn_wk_avg(nn),1:366);
+
+%wrap year around:
+x=ktn_yd_wk(nn); x=[x(end)-366; x(2:end); x(2)+366];
+y=ktn_wk_avg(nn); y=[y(end); y(2:end); y(2)];
+%for the moment, exclude low first value:
+YY=interp1(x,y,1:366);
 figure, hold on
 
 %light gray vertical lines for each sampling day:
@@ -484,13 +489,17 @@ plot(1:366,YY,'-','color',[0.5 0.5 0.5])
 
 %% Link to and comparison with syn stuff!
 
-load('/Users/kristenhunter-cevera/Documents/MATLAB/MVCO_Syn_analysis/mvco_envdata_16Aug2016.mat')
-load('/Users/kristenhunter-cevera/Documents/MATLAB/MVCO_Syn_analysis/syndata_04Jan2017.mat')
+load('/Users/kristenhunter-cevera/MVCO_light_at_depth/syn_data_analysis/mvco_envdata_15Dec2017.mat')
+load('/Users/kristenhunter-cevera/MVCO_light_at_depth/syn_data_analysis/syndata_04Jan2017.mat')
 
+%%
 figure, plot(1:366, light_avg,'.-'), hold on
 E_d = light_avg.*exp(4*-YY');
 plot(1:366,E_d,'.-')
-
+xlim([1 366])
+ylabel('Daily average radiation (MJ m{-2})')
+xlabel('Year day')
+set(gca,'fontsize',14)
 %%
 figure
 plot(Tcorr_avg, mu_avg,'o')
@@ -503,14 +512,23 @@ clf
 % scatter(E_d, mu_avg,30,ydmu,'filled')
 
 subplot(1,2,1,'replace')
-scatter(light_avg, mu_avg,30,Tcorr_avg,'filled')
-caxis([-2 22])
+scatter(light_avg, mu_avg,30,ydmu,'filled')
+ylabel('Division rate (d^{-1})')
+xlabel('Average radiation (MJ m{-2})')
+caxis([1 366])
 colormap jet
+set(gca,'fontsize',14,'box','on')
+title('Incident')
+
 subplot(1,2,2,'replace')
-scatter(E_d, mu_avg,30,Tcorr_avg,'filled')
-caxis([-2 22])
+scatter(E_d, mu_avg,30,ydmu,'filled')
+xlabel('Average radiation at 4m depth (MJ m{-2})')
+caxis([1 366])
+hbar=colorbar; set(hbar,'Ydir','reverse'); ylabel(hbar,'Year day')
+set(gca,'fontsize',14,'box','on')
+title('At depth')
 %%
-figure
+clf
 % subplot(1,2,1,'replace')
 % scatter(light_avg, PE_avg,30,ydmu,'filled')
 % subplot(1,2,2,'replace')
@@ -518,9 +536,18 @@ figure
 
 subplot(1,2,1,'replace')
 scatter(light_avg, PE_avg,30,Tcorr_avg,'filled')
+xlabel('Average radiation (MJ m{-2})')
+ylabel('PE fluorescence')
 colormap jet
 caxis([-2 22])
+set(gca,'fontsize',14,'box','on')
+xlim([0 30])
+
 subplot(1,2,2,'replace')
 scatter(E_d, PE_avg,30,Tcorr_avg,'filled')
 caxis([-2 22])
-colorbar
+xlim([0 10])
+xlabel('Average radiation at 4m depth (MJ m{-2})')
+
+set(gca,'fontsize',14,'box','on')
+hbar=colorbar; ylabel(hbar,'Temperature')

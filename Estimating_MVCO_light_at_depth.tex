@@ -123,7 +123,7 @@ The CTD casts are located in a folder at: \path{\\maddie\TaylorF\from_Samwise\da
 
 %'\textbackslash \textbackslash sosiknas1\textbackslash Lab\_data\textbackslash MVCO\textbackslash processed\_CTD\_casts\textbackslash`
 
-These .cnv files are then imported by \path{import_ctd_casts.m} (which calls on \path{import_cnvfile.m}) and parses the data from each cast into a structure that is then saved. The data though still needs to be quality-controlled, and this is performed in the script \path{process_downcast.m}, than imports this structure, searches for the downcast portion, does some double checking between up and down casts and then records a few key measurements for specific depths. 
+These .cnv files are then imported by \path{import_ctd_casts.m} (which calls on \path{import_cnvfile.m}) and parses the data from each cast into a structure that is then saved. The data though still needs to be quality-controlled, and this is performed in the script \path{CTD_QC.m}, then imports this structure, searches for the downcast portion, does some double checking between up and down casts and then records a few key measurements for specific depths. 
 
 %\subsection{}
 

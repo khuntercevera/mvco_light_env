@@ -19,8 +19,8 @@ load(fullfile(sourcepath,'good_data_folders.mat'))
 wv_record=[];
 wv_log={};
 wv_spectra={};
-plotflag=0;
-extraplotflag=0;
+plotflag=1;
+%extraplotflag=1;
 
 for foldernum=good_data' %are these the ones with lat/lon?
     
@@ -123,35 +123,63 @@ for foldernum=good_data' %are these the ones with lat/lon?
             
             if plotflag
                 
+                set(gcf,'color','w')
                 subplot(1,4,1,'replace')
                 %a look at the cast:
                 plot(time,depth,'-'), hold on
                 plot(time(impr),depth(impr),'.','markersize',12)
-                set(gca,'YDir','reverse')
+                set(gca,'YDir','reverse','fontsize',14)
                 datetick
                 title(['File: ' num2str(filenum) ' out of ' num2str(length(K_PAR)) ],'Interpreter','none')
+                ylabel('Depth (m)')
                 
                 subplot(1,4,2,'replace'), hold on
                 plot(wv_sol,esl,'-','color',[0.5 0.5 0.5])
-                title(tempdata(filenum).file,'Interpreter','none')
-                
+                title(tempdata(filenum).file,'Interpreter','none')                
+                colormap(flipud(parula(length(impr))))
                 for j=1:length(ipar)
                     scatter(wv,edl(ipar(j),:),40,depth(impr(j))*ones(size(wv)),'filled')
                 end
+                caxis([0 max(depth(ipar))])
+                hbar=colorbar; ylabel(hbar,'depth')
+                set(gca,'fontsize',14,'box','on')
+                ylabel('Irradiance (uW/cm^2/nm)')
+                xlabel('Wavelength (nm)')
+                xlim([345 805])
+                ylim([-2 max(max(esl))+2])
+                
                 
                 subplot(1,4,3,'replace'),hold on
-                if ~isempty(i4), plot(wv,edl(ipar(i4),:),'-','color',[0 0.5 1]); end
-                if ~isempty(i8),plot(wv,edl(ipar(i8),:),'-','color',[0 0 1]); end
-                if ~isempty(i12),plot(wv,edl(ipar(i12),:),'-','color',[0 0 0.7]); end
+                if ~isempty(i4), h1=plot(wv,edl(ipar(i4),:),'-','color',[0 0.5 1]); end
+                if ~isempty(i8),h2=plot(wv,edl(ipar(i8),:),'-','color',[0 0 1]); end
+                if ~isempty(i12),h3=plot(wv,edl(ipar(i12),:),'-','color',[0 0 0.7]); end
+                
+                if ~isempty(i4) && ~isempty(i8) && ~isempty(i12)
+                legend([h1(1); h2(1); h3(1)],'4 m','8 m', '12 m')
+                elseif ~isempty(i4) && ~isempty(i8) && isempty(i12)
+                    legend([h1(1); h2(1)],'4 m','8 m')
+                else ~isempty(i4) && isempty(i8) && isempty(i12)
+                    legend(h1(1),'4 m')
+                end
+                
+                set(gca,'fontsize',14,'box','on')
+                ylabel('Irradiance (uW/cm^2/nm)')
+                xlabel('Wavelength (nm)')
+                xlim([345 805])
+                ylim([-2 max(max(edl(ipar(i4),:)))+2])
                 
                 subplot(1,4,4,'replace'), hold on
-                plot(max_wv(:,1),max_wv(:,2),'.','markersize',12)
-                if ~isempty(i4), plot(wv_record(end,6),wv_record(end,7),'p','color',[0 0.5 1]); end
-                if ~isempty(i8),plot(wv_record(end,8),wv_record(end,9),'p','color',[0 0 1]); end
-                if ~isempty(i12),plot(wv_record(end,10),wv_record(end,11),'p','color',[0 0 0.7]); end
-                
+                plot(max_wv(:,1),max_wv(:,2),'.','markersize',12,'color',[0.4 0.4 0.4])
+                %lines:
+                line([4 4],ylim,'color',[0.5 0.5 0.5])
+                line([8 8],ylim,'color',[0.5 0.5 0.5])
+                line([12 12],ylim,'color',[0.5 0.5 0.5])
+                if ~isempty(i4), plot(wv_record(end,6),wv_record(end,7),'p','markerfacecolor',[0 0.5 1],'markeredgecolor',[0 0.5 1],'markersize',10); end
+                if ~isempty(i8),plot(wv_record(end,8),wv_record(end,9),'p','markerfacecolor',[0 0 1],'markeredgecolor',[0 0 1],'markersize',10); end
+                if ~isempty(i12),plot(wv_record(end,10),wv_record(end,11),'p','markerfacecolor',[0 0 0.6],'markeredgecolor',[0 0 0.6],'markersize',10); end
+                set(gca,'fontsize',14,'box','on')
                 xlabel('Depth (m)')
-                ylabel('Wavelength of maximum energy (nm)')
+                ylabel('Wavelength of maximum irradiance (nm)')
                 
                 keyboard
             end
@@ -186,9 +214,9 @@ tn=find(wv_record(:,13)==3 | wv_record(:,13)==4);
 
 %%
 subplot(1,3,3,'replace'), hold on
-plot(wv_record(:,1),wv_record(:,8),'o','color',[0 0.7 0]) %4m max wv
-plot(wv_record(:,1),wv_record(:,10),'p','color',[0 0.5 1]) %8m max wv
-plot(wv_record(:,1),wv_record(:,12),'s','color',[0 0 0.8]) %12m max wv
+plot(wv_record(:,1),wv_record(:,8),'.','color',[0 0.8 1],'markersize',12) %4m max wv
+plot(wv_record(:,1),wv_record(:,10),'.','color',[0 0.3 1],'markersize',12) %8m max wv
+plot(wv_record(:,1),wv_record(:,12),'.','color',[0 0 0.6],'markersize',12) %12m max wv
 
 legend('4m','8m','12m')
 %hmmm - cool, looks like mainly steady at 540-560, but some interesting
@@ -235,7 +263,17 @@ zlabel('Relative distrbution')
 %view([32  34]) %for subplot2
 view([-24 42.8]) %for subplot1
 
-
+%% An example plot of solar and wavelengths for 4m, 8m, 12m depths
+q=30;
+figure,hold on
+%spectra at depth:
+plot(wv,wv_spectra{q,1},'.-','color',[0 0.6 1])
+plot(wv,wv_spectra{q,3},'.-','color',[0 0.3 1])
+plot(wv,wv_spectra{q,5},'.-','color',[0 0 0.6])
+%solar spectra:
+plot(wv,wv_spectra{q,2},'.-','color',[0.6 0.6 0.6])
+plot(wv,wv_spectra{q,4},'.-','color',[0.4 0.4 0.4])
+plot(wv,wv_spectra{q,6},'.-','color',[0.2 0.2 0.2])
 %% And now, let's look at individual wavelength attentuation relationships with chlorophyll...
 
 %A better comparison with Morel?
