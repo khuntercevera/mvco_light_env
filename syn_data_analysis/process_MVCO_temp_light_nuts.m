@@ -93,7 +93,7 @@ Tcorr_std=nanstd(Tbeam_corr,0,2);
 % Tcorr_avg_wk=nanmean(Tcorr_wk,2);
 % Tcorr_std_wk=nanstd(Tcorr_wk,0,2);
 
-
+%AT SOME POINT NEED TO COMBINE WITH CTD DATA FOR MISSING VALUES!!!
 
 %% Light Data
 %--------------------------------------------------------------------------------------------------------
@@ -102,7 +102,7 @@ Tcorr_std=nanstd(Tbeam_corr,0,2);
 
 total_light=[];
 
-for year=2003:2016
+for year=2003:2017
     
     switch year
         case 2003
