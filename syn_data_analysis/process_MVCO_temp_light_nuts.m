@@ -319,4 +319,6 @@ end
 dd=date;
 %
 eval(['save /Users/kristenhunter-cevera/Documents/MATLAB/MVCO_Syn_analysis/mvco_envdata_' dd(1:2) dd(4:6) dd(8:end) '.mat *light* *Tcorr* corr_years Tbeam_corr dy_*  *_month nutyears nutyrdy time_nut* SiOH_wk NH4_wk NO3_wk PO4_wk SiOH_*_mn NH4_*_mn NO3_*_mn PO4_*_mn'])
+eval(['save /Users/kristenhunter-cevera/MVCO_light_at_depth/syn_data_analysis/mvco_envdata_' dd(1:2) dd(4:6) dd(8:end) '.mat *light* *Tcorr* corr_years Tbeam_corr dy_*  *_month nutyears nutyrdy time_nut* SiOH_wk NH4_wk NO3_wk PO4_wk SiOH_*_mn NH4_*_mn NO3_*_mn PO4_*_mn'])
+
 %-regexp (?<!time)_\w*_mn
