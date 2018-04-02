@@ -29,12 +29,13 @@ downcast_temp=nan(length(z_grid),length(CTD));
 downcast_sal=downcast_temp; 
 downcast_press=downcast_temp; 
 downcast_pdens=downcast_temp;
+downcast_bin=downcast_temp;
 downcast_files={};
 downcast_lat=[];
 downcast_lon=[];
 
 %%
-for q=10:length(CTD);
+for q=164:length(CTD);
     
     col_hdr=CTD(q).data_hdr;
     temp_data=CTD(q).data;
@@ -73,7 +74,7 @@ for q=10:length(CTD);
                         
             %find longest continuous stretch-this should be the descent:
             nonconsec=find(diff(dc)~=1); %find the values that are not contiguous in the index
-            [mm, ind]=max(diff(dc(nonconsec))); %[mm, ind]=max(diff(nonconsec));
+            [mm, ind]=max(diff(nonconsec)); %[mm, ind]=max(diff(dc(nonconsec)));
             dsc_ind1=dc(nonconsec(ind)+1);
             dsc_ind2=dc(nonconsec(ind+1));
             dsc=dsc_ind1:dsc_ind2; %indexes for main descent
@@ -103,6 +104,7 @@ for q=10:length(CTD);
             downcast_sal(zz:(zz+length(depth_bins)-2),q)=binned_sal; 
             downcast_press(zz:(zz+length(depth_bins)-2),q)=binned_press; 
             downcast_pdens(zz:(zz+length(depth_bins)-2),q)=binned_pdens;
+            downcast_bins(zz:(zz+length(depth_bins)-1),q)=depth_bins;
             
             downcast_lat(q)=CTD(q).lat;
             downcast_lon(q)=CTD(q).lon;
@@ -134,7 +136,7 @@ for q=10:length(CTD);
                 ind_top=jt_ctd(jj); ind_bottom=jb_ctd(jj);
                 steve_depth=z_ctd; steve_temp=wt_ctd(jj,:);
             else
-                ind_top=NaN; ind_bottom=NaN;
+                ind_top=1; ind_bottom=length(depth);
                 steve_depth=NaN; steve_temp=NaN;
             end
             
@@ -187,5 +189,7 @@ for q=10:length(CTD);
     else %is empty file
         CTD_QC(q).flag='not a cast';
     end
+    
+    clearvars -except CTD CTD_QC downcast_* q z_grid *_ctd
     
 end
