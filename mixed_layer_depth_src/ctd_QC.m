@@ -1,8 +1,10 @@
-%Okay, before can use CTD casts, need to QC data:
+%Okay, before can use CTD casts, should go through the data to:
+
+%flag or remove any bad data 
+(%remove profiles with no data (less than 10 data points in vertical) or
+%just bad cast (temp < -10))
+%and
 %extract down cast
-%remove and troubling start points due to residual fresh water in salinity sensor at start
-%remove profiles with no data (less than 10 data points in vertical) or
-%just bad cast (temp < -10)
 
 %Now, Steve Lentz had already gone through manually identified top and
 %bottom of downcast, but we can double check to see where his markings
@@ -16,11 +18,6 @@ load('/Users/kristenhunter-cevera/MVCO_light_at_depth/mixed_layer_depth_src/proc
 
 %Question of binning data in a mat file? Might be useful...
 z_grid=0:0.2:38; %to map data points onto...
-%I truncated the gridded depth range to where there was data.
-
-%for calculating potential density (pressure affect removed):
-addpath /Users/kristenhunter-cevera/MVCO_light_at_depth/seawater_ver3_2/
-addpath /Users/kristenhunter-cevera/Documents/MATLAB/mvco_tools/
 
 %%
 
@@ -29,13 +26,13 @@ downcast_temp=nan(length(z_grid),length(CTD));
 downcast_sal=downcast_temp; 
 downcast_press=downcast_temp; 
 downcast_pdens=downcast_temp;
-downcast_bin=downcast_temp;
+downcast_bins=downcast_temp;
 downcast_files={};
 downcast_lat=[];
 downcast_lon=[];
 
 %%
-for q=164:length(CTD);
+for q=[154 155 160] %1:length(CTD); [1 10 20 51 53 107 108 150 151 152 154 155 160]
     
     col_hdr=CTD(q).data_hdr;
     temp_data=CTD(q).data;
@@ -63,7 +60,7 @@ for q=164:length(CTD);
         file_time=CTD(q).upload_time;
         
         %some basic QC checks:
-        if max(depth) < 3
+        if max(depth) < 4
             CTD_QC(q).flag='not a cast';
             
         else %continue with QC!
@@ -112,6 +109,12 @@ for q=164:length(CTD);
             
             CTD_QC(q).downcast_ind = dsc;
             CTD_QC(q).upcast_ind = usc; %accounts for datapoints removed at start
+            
+            %If want to manually go for the points:
+%             figure, plot(depth,'.'), set(gca,'YDir','reverse') %to get indices
+%             [x, ~]=ginput(2); 
+%             dsc_ind1=floor(x(1)); dsc_ind2=ceil(x(2));
+    
             %I don't know if I want a grid...curious interpolation
 %             %map to grid and to structure file:
 %             dscB=dsc;
@@ -190,6 +193,56 @@ for q=164:length(CTD);
         CTD_QC(q).flag='not a cast';
     end
     
-    clearvars -except CTD CTD_QC downcast_* q z_grid *_ctd
+    clearvars -except CTD CTD_QC downcast_* q z_grid *_ctd %remove temporary variables from each iteration
     
 end
+
+%% a bit of clean up:
+
+downcast_bins=downcast_bins(1:end-1,:); %remove extra bin
+
+jj=find(downcast_bins==0); %replace zeros with nan's:
+downcast_bins(jj)=NaN;
+
+downcast_pdens(jj)=NaN;
+downcast_press(jj)=NaN;
+downcast_temp(jj)=NaN;
+downcast_sal(jj)=NaN;
+
+downcast_lat(downcast_lat==0)=NaN;
+downcast_lon(downcast_lon==0)=NaN;
+
+%% double check them datas!
+
+J=[];
+for j=1:length(CTD_QC)
+   if ~isempty(CTD_QC(j).flag)
+       J=[J;j];
+   end  
+end
+
+%good data:
+ii=setxor(J,1:length(CTD_QC));
+
+%% double check on bins:
+for j=1:size(downcast_bins,1)
+    if round(sum(diff(downcast_bins(j,downcast_bins(j,:)~=0)))) ~= 0 
+        keyboard
+    end
+end
+
+%should not keyboard!
+
+%% if need to remove bad data points:
+
+%only came across two cases:
+% qq=find(depth < -1);
+% qq=find(temperature > 80);
+% 
+% ii=setxor(qq,1:length(depth));
+% for j=1:size(temp_data,2)
+%     temp_data{j}=temp_data{j}(ii,:); %exclude bad data point...
+% end
+% 
+% CTD_QC(q).data=temp_data;
+
