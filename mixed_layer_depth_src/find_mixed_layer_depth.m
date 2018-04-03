@@ -1,275 +1,178 @@
-%Okay, before can use CTD casts, need to QC data and remove troubling start
-%points and residual fresh water in salinity sensor at start:
+%Now that we have the downcast and a rough cut on quality control,
+%we can start to identify where the mixed layer depth might be...
 
-%for calculating potential density (pressure affect removed):
+%use of two metrics:
+%   Brunt Vaisala frequency (average, median, or max)
+%   Depth at whcich temperature deviates from 0.1 0r 0.X degrees from surface
+
+%for calculating Brunt-Vaisala:
 addpath /Users/kristenhunter-cevera/MVCO_light_at_depth/seawater_ver3_2/
 addpath /Users/kristenhunter-cevera/Documents/MATLAB/mvco_tools/
 
 plotflag=1;
 warning off
 
-% mld_titlesB={'cast name'; 'file_time'; 'max N2'; 'depth of max N2'; 'mean N2'; ...
-%                 'closest depth to 4m'; 'N2 closest to 4m'; 'temperature closest to 4m'; 'pdens closest to 4m'; ... %depth, N2, temp and dens at 4m
-%                 'closest depth to 12m'; 'N2 closest to 12m'; 'temperature closest to 12m'; 'pdens closest to 12m'; 'upcast_flag';'manual edit'};  %depth, N2, temp and dens at 12m
-%           
-binned_data_titles={'depth_bins' 'depth' 'salinity' 'temperature' 'pressure' 'potential density'};
+%first, find all trips around MVCO:
 
-%mld_titles={'cast name'; 'file_time'; 'max N2'; 'depth of max N2'; 'stratified?'; ...
-%                 'closest depth to 4m'; 'N2 closest to 4m'; 'temperature closest to 4m'; 'pdens closest to 4m'; ... %depth, N2, temp and dens at 4m
-%                 'closest depth to 12m'; 'N2 closest to 12m'; 'temperature closest to 12m'; 'pdens closest to 12m'; 'upcast_flag';'manual edit'};  %depth, N2, temp and dens at 12m
-%           
+%% find only trips to tower or node:
+
+box_tower=[-70.58 -70.53 41.315 41.33];
+box_node=[-70.58 -70.53 41.33 41.345];
+
+mvco_ind=find(downcast_lat > 41.3 & downcast_lat < 41.35 & downcast_lon < -70.53 & downcast_lon > -70.60 & cellfun('isempty',{CTD_QC(:).flag})==1);
+%cellfun('isempty',regexp({CTD_QC(:).cast_name}','(deck)|(test)'))==1)
+%this should be about ~104 casts...
+
+% and if curious, see where all the casts come from...
+figure
+plot(downcast_lon(mvco_ind),downcast_lat(mvco_ind),'.')
+patch([-70.53 -70.53 -70.60 -70.60],[41.3 41.35 41.35 41.3],'k','facecolor','none')
+
 %%
 for q=1:length(mvco_ind);
     
-    col_hdr=CTD(mvco_ind(q)).data_hdr;
-    temp_data=CTD(mvco_ind(q)).data;
+    col_hdr=CTD_QC(mvco_ind(q)).data_hdr;
+    temp_data=CTD_QC(mvco_ind(q)).data;
     
-    if any(~cellfun('isempty',temp_data))
-        
-        %find and unload desired variables from cell array: cloum indexes
-        dp=find(cellfun('isempty',regexp(col_hdr,'Depth'))==0);
-        s=find(cellfun('isempty',regexp(col_hdr,'Salinity'))==0);
-        t=find(cellfun('isempty',regexp(col_hdr,'Temperature'))==0);
-        p=find(cellfun('isempty',regexp(col_hdr,'Pressure'))==0);
-        de=find(cellfun('isempty',regexp(col_hdr,'[^(Potential] Density'))==0);
-        pd=find(cellfun('isempty',regexp(col_hdr,'Potential'))==0);
-        ct=find(cellfun('isempty',regexp(col_hdr,'Time, Elapsed'))==0);
-        
-        depth=temp_data{dp};
-        press=temp_data{p};
-        temperature=temp_data{t};
-        sal=temp_data{s};
-        dens=temp_data{de};
-        pdens=temp_data{pd};
-        cast_time=temp_data{ct};
-        
-        file_time=CTD(mvco_ind(q)).upload_time;
-
-        %Now to QC data:
-        %Remove any salinities with less than 25 ppt
-        %typically there is a time delay at the beginning before CTD starts
-        %dropping, go with data that's after at least a 30s delay...
-        %occasionally, there are time points out of order...resort
-        
-        %find descent:
-        smooth_depth=smooth(depth,200); %just a bit easier for direct logic tests
-        dc=find(diff(smooth_depth) > 0.0025); %falling
-        
-        %find longest continuous stretch-this should be the descent:
-        nonconsec=find(diff(dc)~=1); %find the values that are not contiguous
-        [mm, ind]=max(diff(nonconsec));
-        dsc_ind1=dc(nonconsec(ind)+1);
-        dsc_ind2=dc(nonconsec(ind+1));
-        dsc=dsc_ind1:dsc_ind2; %indexes for main descent
-        usc=dsc_ind2+1:length(depth); %and the upcast!
-        
-        %calc Brunt-Vaisala frequency to help determine MLD, but first bin
-        if ~isempty(dc) && max(depth) > 4 && length(dsc) > 1
-            
-            %for easier handling:
-            depthD=depth(dsc);
-            salD=sal(dsc);
-            temperatureD=temperature(dsc);
-            pressD=press(dsc);
-            pdensD=pdens(dsc);
-            cast_timeD=cast_time(dsc);
-            
-            depthU=depth(usc);
-            salU=sal(usc);
-            temperatureU=temperature(usc);
-            pressU=press(usc);
-            pdensU=pdens(usc);
-            cast_timeU=cast_time(usc);
-            
-            
-            %bin variables into ~0.25 m bins:
-            max_depth=max([depthD;depthU]);
-            min_depth=min([depthD;depthU]);
-            
-            depth_bins=floor(min_depth):0.25:ceil(max_depth);
-            binned_dataD=nan(length(depth_bins),6);
-            binned_dataU=nan(length(depth_bins),6);
-            for i=1:length(depth_bins)-1
-                ii=find(depthD >= depth_bins(i) & depthD < depth_bins(i+1));
-                binned_dataD(i,1)=depth_bins(i);
-                binned_dataD(i,2)=nanmean(depthD(ii));
-                binned_dataD(i,3)=nanmean(salD(ii));
-                binned_dataD(i,4)=nanmean(temperatureD(ii));
-                binned_dataD(i,5)=nanmean(pressD(ii));
-                binned_dataD(i,6)=nanmean(pdensD(ii));
-                
-                jj=find(depthU >= depth_bins(i) & depthU < depth_bins(i+1));
-                binned_dataU(i,1)=depth_bins(i);
-                binned_dataU(i,2)=nanmean(depthU(jj));
-                binned_dataU(i,3)=nanmean(salU(jj));
-                binned_dataU(i,4)=nanmean(temperatureU(jj));
-                binned_dataU(i,5)=nanmean(pressU(jj));
-                binned_dataU(i,6)=nanmean(pdensU(jj));
-            end
-            
-            %calculate N2 from binned data:
-            N2D=sw_bfrq(binned_dataD(:,3),binned_dataD(:,4),binned_dataD(:,5));
-            N2U=sw_bfrq(binned_dataU(:,3),binned_dataU(:,4),binned_dataU(:,5));
-            %sw_bfrq(sal (psu), temperature (deg C), pressure (db))
-            %we need to see what the max N2 is, and what N2 is at 4m...
-            
-            %If salinity data doesn't really match on the upcast, then exclude this in the downcast:
-            %maybe only consider N2 values that are below 3m to avoid false positives:
-            
-            delta_salU=max(salU(find(depthU < 4)))-min(salU(find(depthU < 4)));
-            delta_salD=max(salD(find(depthD < 4)))-min(salD(find(depthD < 4)));
-            
-            if abs(delta_salD./delta_salU) > 2
-                disp('Salinity on the down cast questionable...going with upcast for now...')
-                upcast_flag='upcast';
-                binned_data=binned_dataU;
-                N2=N2U;
-                notes='Salinity on the down cast questionable; using upcast; metrics are for below 3m';
-            else
-                disp('Salinity difference is reasonable, going with downcast for now...')
-                binned_data=binned_dataD;
-                N2=N2D;
-                upcast_flag='downcast';
-                notes='metrics are for below 3m';
-            end
-            
-            i3=find(binned_data(1:end-1,1) > 3);
-            [mm, is]=sort(N2(i3),'descend');
-            nn=find(~isnan(mm)); %avoid nan's
-            mm=mm(nn); is=is(nn); %to make indexing cleaner
-            im=i3(is(1)); %index corresponds to max N2 value below 3 m...
-            
-            %mean N2 over data:
-            avgN2=nanmean(N2(i3));
-            medN2=nanmedian(N2(i3)); %not as useful a metric for this analysis...
-            
-            %and find the indicies for 4m and 12m (or closet depth):
-            [d4,ii4]=min(abs(binned_data(:,1)-4));
-            [d12,ii12]=min(abs(binned_data(:,1)-12));
-            
+    pdens_deltas=[0.005 0.01 0.05 0.1];
+    temp_deltas=[0.2 0.4 0.6 0.8 1];
+    
+    temp_ref=[];
+    pdens_ref=[];
+    
+    rec_pdens=[pdens_deltas' nan(size(pdens_deltas))'];
+    rec_temp=[temp_deltas' nan(size(temp_deltas))'];
+    
+    %could do this via indexing....
+    j=1; %counter for depth bins
+    h=1; %counter for values in pdens threshold
+    g=1; %counter for values in temp threshold
+    while j < length(downcast_bins)-1
+        j=j+1;
+        if abs(pdens_ref - downcast_pdens(j,q)) > pdens_deltas(h)
+            rec_pdens(h,2)=downcast_bins(j,q);
+            h=h+1;
         end
-        
-        % Hmm, need to add column of indexes, instabilities (N2 < 0) and median?
-        
-        if plotflag==1
-            clf %see what this metric is highlighting - over all looks pretty good!
-            subplot(2,3,1,'replace'),  hold on
-            %plot(pdens,depth,'k.-')
-            plot(pdensD,depthD,'.','color',[0 0.5 1])
-            plot(pdensU,depthU,'.','color',[1 0.5 0])
-            plot(binned_dataD(:,6),binned_dataD(:,1),'.-')
-            line(xlim,[binned_dataD(im,1) binned_dataD(im,1)],'color','r')
-            line(xlim,[4 4],'color',[0.5 0.5 0.5])
-            set(gca,'ydir','reverse','fontsize',14)
-            xlabel('Potential Density (kg/m^3)') %ylabel(col_hdr{6})
-            title([CTD(mvco_ind(q)).cast_name ':' datestr(file_time) ' : ' num2str(q) ' out of ' num2str(length(mvco_ind))],'interpreter','none')
-            %legend('Obs \rho','Potential \rho','location','NorthWest')
-            
-            subplot(2,3,2,'replace'), hold on
-            plot(cast_time,depth,'k.-')
-            plot(cast_timeD,depthD,'.','color',[0 0.5 1])
-            plot(cast_timeU,depthU,'.','color',[1 0.5 0])
-            set(gca,'ydir','reverse','fontsize',14)
-            xlabel('Time') %ylabel(col_hdr{6})
-            title('CTD position with time')
-            
-            subplot(2,3,3,'replace'), hold on
-            plot(N2D,binned_dataD(1:end-1,1),'.-','color',[0 0.5 1])
-            plot(N2U,binned_dataU(1:end-1,1),'r.-','color',[1 0.5 0])
-            line([1e-4 1e-4], get(gca,'ylim'),'color','r') %anything higher than this and you are probably stratified
-            line([avgN2 avgN2], get(gca,'ylim'),'color','c') %average N2
-
-            plot(N2(im),binned_dataD(im,1),'bp','markersize',12) %max only considering below 3.75m
-            set(gca,'ydir','reverse','fontsize',14)
-            xlabel('Brunt-Vaisala Freq')
-            xlim([-1e-3 1e-2])
-            line(xlim,[4 4],'color',[0.5 0.5 0.5])
-            title('N2 with depth')
-            
-            subplot(2,3,4,'replace'),  hold on
-            %plot(temperature,depth,'k.-')
-            plot(temperatureD,depthD,'.','color',[0 0.5 1])
-            plot(binned_dataD(:,4),binned_dataD(:,1),'.-')
-            plot(temperatureU,depthU,'.','color',[1 0.5 0])
-            plot(binned_dataU(:,4),binned_dataU(:,1),'r.-')
-            set(gca,'ydir','reverse','fontsize',14)
-            xlabel('Temperature (\circC)') %ylabel(col_hdr{6})
-            line(xlim,[4 4],'color',[0.5 0.5 0.5])
-            title('Temperature with Depth')
-            
-            subplot(2,3,5,'replace'),  hold on
-            plot(sal,depth,'k.-')
-            plot(salD,depthD,'.','color',[0 0.5 1])
-            plot(binned_dataD(:,3),binned_dataD(:,1),'.-')
-            plot(salU,depthU,'.','color',[1 0.5 0])
-            plot(binned_dataU(:,3),binned_dataU(:,1),'.-')
-            set(gca,'ydir','reverse','fontsize',14)
-            xlabel('Salinity') %ylabel(col_hdr{6})
-            xlim([median(salD)-1 median(salD)+1])
-            line(xlim,[4 4],'color',[0.5 0.5 0.5])
-            title('Salinity with Depth')
-            
-            subplot(2,3,6,'replace'),  hold on
-            plot(cast_time,sal,'k.-')
-            plot(cast_timeD,salD,'.','color',[0 0.5 1])
-            plot(cast_timeU,salU,'.','color',[1 0.5 0])
-            plot(cast_time,depth,'.-')
-            ylabel('Salinity') %ylabel(col_hdr{6})
-            
-            %pause
-        end %plotflag
-               
-        %Is the water stratified? Or wouldn't be well mixed?
-        %Looking at Young-Oh's slide, it looks like the min would be around
-        %.25 * 10^-4 N2 (S^{-2})...
-        
-        disp(['Max N2: ' num2str(N2(im))])
-        disp(['Avg N2: ' num2str(avgN2)])
-        disp(['Median N2: ' num2str(medN2)])
-         
-        keyboard    
-        
-        %record info:
-        ctd_mix(q).cast_name = CTD(mvco_ind(q)).cast_name;
-        ctd_mix(q).empty_flag = 0;
-        ctd_mix(q).file_time =file_time;
-        
-        %record key processing steps:
-        ctd_mix(q).descent_ind=dsc;
-        ctd_mix(q).upward_ind=usc;
-        ctd_mix(q).binned_downdata=binned_dataD;
-        ctd_mix(q).binned_updata=binned_dataU;
-        ctd_mix(q).bfrq_down=N2D;
-        ctd_mix(q).bfrq_up=N2U;
-        ctd_mix(q).bin_titles=binned_data_titles;
-        
-        %record some metrics and decisions:
-        ctd_mix(q).user_call= user_call;
-        ctd_mix(q).max_N2 = N2(im); 
-        ctd_mix(q).depth_maxN2= binned_data(im,1);
-        ctd_mix(q).avg_N2 = avgN2;
-        ctd_mix(q).med_N2= medN2;
-        ctd_mix(q).data_at_4m=[binned_data(ii4,1) N2(ii4) binned_data(ii4,4) binned_data(ii4,6)];
-        ctd_mix(q).data_at_12m=[binned_data(ii12,1) N2(ii12) binned_data(ii12,4) binned_data(ii12,6)];
-        ctd_mix(q).cast_used = upcast_flag;
-        
-        ctd_mix(q).notes=notes;
-        
-        if strcmp(user_call,'mixed')
-            ctd_mix(q).stratification_driver='';
-        else
-            ctd_mix(q).stratification_driver=reason;
+        if abs(temp_ref - downcast_temp(j,q)) > temp_deltas(g)
+            rec_temp(h,2)=downcast_bins(j,q);
+            g=g+1;
         end
-            
-%         [Q] = input('Does the automatic finding of N2 look reasonable? If so, enter "auto", if not, enter "manual" \n');
-%         if any(diff(cast_time) < 0), disp('Something wrong with time sync?'), end
-       
-    else       
-        ctd_mix(q).cast_name = CTD(mvco_ind(q)).cast_name;
-        ctd_mix(q).empty_flag = 1;
-        ctd_mix(q).time=file_time;
-        ctd_mix(q).notes='data is present, but not valid';
-    end %if not empty
+    end
+    
+    %calculate N2 from binned data:
+    N2=sw_bfrq(downcast_sal(:,q),downcast_temp(:,q),downcast_press(:,q),downcast_lat(q));
+    
+    clf %see what this metric is highlighting - over all looks pretty good!
+    subplot(2,3,1,'replace'),  hold on
+    %plot(pdens,depth,'k.-')
+    plot(downcast_pdens(:,q),downcast_bins(:,q),'.-','color',[0 0.5 1])
+    plot(pdensU,depthU,'.','color',[1 0.5 0])
+    plot(binned_dataD(:,6),binned_dataD(:,1),'.-')
+    line(xlim,[binned_dataD(im,1) binned_dataD(im,1)],'color','r')
+    line(xlim,[4 4],'color',[0.5 0.5 0.5])
+    set(gca,'ydir','reverse','fontsize',14)
+    xlabel('Potential Density (kg/m^3)') %ylabel(col_hdr{6})
+    title([CTD(mvco_ind(q)).cast_name ':' datestr(file_time) ' : ' num2str(q) ' out of ' num2str(length(mvco_ind))],'interpreter','none')
+    %legend('Obs \rho','Potential \rho','location','NorthWest')
+    
+    subplot(2,3,2,'replace'), hold on
+    plot(cast_time,depth,'k.-')
+    plot(cast_timeD,depthD,'.','color',[0 0.5 1])
+    plot(cast_timeU,depthU,'.','color',[1 0.5 0])
+    set(gca,'ydir','reverse','fontsize',14)
+    xlabel('Time') %ylabel(col_hdr{6})
+    title('CTD position with time')
+    
+    subplot(2,3,3,'replace'), hold on
+    plot(N2D,binned_dataD(1:end-1,1),'.-','color',[0 0.5 1])
+    plot(N2U,binned_dataU(1:end-1,1),'r.-','color',[1 0.5 0])
+    line([1e-4 1e-4], get(gca,'ylim'),'color','r') %anything higher than this and you are probably stratified
+    line([avgN2 avgN2], get(gca,'ylim'),'color','c') %average N2
+    
+    plot(N2(im),binned_dataD(im,1),'bp','markersize',12) %max only considering below 3.75m
+    set(gca,'ydir','reverse','fontsize',14)
+    xlabel('Brunt-Vaisala Freq')
+    xlim([-1e-3 1e-2])
+    line(xlim,[4 4],'color',[0.5 0.5 0.5])
+    title('N2 with depth')
+    
+    subplot(2,3,4,'replace'),  hold on
+    %plot(temperature,depth,'k.-')
+    plot(temperatureD,depthD,'.','color',[0 0.5 1])
+    plot(binned_dataD(:,4),binned_dataD(:,1),'.-')
+    plot(temperatureU,depthU,'.','color',[1 0.5 0])
+    plot(binned_dataU(:,4),binned_dataU(:,1),'r.-')
+    set(gca,'ydir','reverse','fontsize',14)
+    xlabel('Temperature (\circC)') %ylabel(col_hdr{6})
+    line(xlim,[4 4],'color',[0.5 0.5 0.5])
+    title('Temperature with Depth')
+    
+    subplot(2,3,5,'replace'),  hold on
+    plot(sal,depth,'k.-')
+    plot(salD,depthD,'.','color',[0 0.5 1])
+    plot(binned_dataD(:,3),binned_dataD(:,1),'.-')
+    plot(salU,depthU,'.','color',[1 0.5 0])
+    plot(binned_dataU(:,3),binned_dataU(:,1),'.-')
+    set(gca,'ydir','reverse','fontsize',14)
+    xlabel('Salinity') %ylabel(col_hdr{6})
+    xlim([median(salD)-1 median(salD)+1])
+    line(xlim,[4 4],'color',[0.5 0.5 0.5])
+    title('Salinity with Depth')
+    
+    subplot(2,3,6,'replace'),  hold on
+    plot(cast_time,sal,'k.-')
+    plot(cast_timeD,salD,'.','color',[0 0.5 1])
+    plot(cast_timeU,salU,'.','color',[1 0.5 0])
+    plot(cast_time,depth,'.-')
+    ylabel('Salinity') %ylabel(col_hdr{6})
+    
+    
+    
+    %Is the water stratified? Or wouldn't be well mixed?
+    %Looking at Young-Oh's slide, it looks like the min would be around
+    %.25 * 10^-4 N2 (S^{-2})...
+    
+    disp(['Max N2: ' num2str(N2(im))])
+    disp(['Avg N2: ' num2str(avgN2)])
+    disp(['Median N2: ' num2str(medN2)])
+    
+    keyboard
+    
+    %record info:
+    ctd_mix(q).cast_name = CTD(mvco_ind(q)).cast_name;
+    ctd_mix(q).empty_flag = 0;
+    ctd_mix(q).file_time =file_time;
+    
+    %record key processing steps:
+    ctd_mix(q).descent_ind=dsc;
+    ctd_mix(q).upward_ind=usc;
+    ctd_mix(q).binned_downdata=binned_dataD;
+    ctd_mix(q).binned_updata=binned_dataU;
+    ctd_mix(q).bfrq_down=N2D;
+    ctd_mix(q).bfrq_up=N2U;
+    ctd_mix(q).bin_titles=binned_data_titles;
+    
+    %record some metrics and decisions:
+    ctd_mix(q).user_call= user_call;
+    ctd_mix(q).max_N2 = N2(im);
+    ctd_mix(q).depth_maxN2= binned_data(im,1);
+    ctd_mix(q).avg_N2 = avgN2;
+    ctd_mix(q).med_N2= medN2;
+    ctd_mix(q).data_at_4m=[binned_data(ii4,1) N2(ii4) binned_data(ii4,4) binned_data(ii4,6)];
+    ctd_mix(q).data_at_12m=[binned_data(ii12,1) N2(ii12) binned_data(ii12,4) binned_data(ii12,6)];
+    ctd_mix(q).cast_used = upcast_flag;
+    
+    ctd_mix(q).notes=notes;
+    
+    if strcmp(user_call,'mixed')
+        ctd_mix(q).stratification_driver='';
+    else
+        ctd_mix(q).stratification_driver=reason;
+    end
+    
+    %         [Q] = input('Does the automatic finding of N2 look reasonable? If so, enter "auto", if not, enter "manual" \n');
+    %         if any(diff(cast_time) < 0), disp('Something wrong with time sync?'), end
+    
     
 end %for loop
 
@@ -390,7 +293,7 @@ line(xlim,[5e-5 5e-5],'color',[0.5 0.5 0.5])
 % % plot(cell2mat(mldBuse(ss,8))-cell2mat(mldBuse(ss,12)),cell2mat(mldBuse(ss,3)),'r.','markersize',12), hold on
 % % plot(cell2mat(mldBuse(mm,8))-cell2mat(mldBuse(mm,12)),cell2mat(mldBuse(mm,3)),'b.','markersize',12)
 % plot(cell2mat(mldBuse(:,8))-cell2mat(mldBuse(:,12)),cell2mat(mldBuse(:,3)),'r.','markersize',12)
-% 
+%
 % xlabel('Temperature difference between 4m and 12m (\circC)')
 % ylabel('Max N2 (s^{-2})')
 
@@ -419,7 +322,7 @@ plot(avgN2(:),data_at_4m(:,3)-data_at_12m(:,3),'.','markersize',12)
 ylabel('Temperature difference between 4m and 12m (\circC)')
 xlabel('Average N2')
 
-% 
+%
 % subplot(2,4,8,'replace')
 % plot(cell2mat(mldBuse(ss,9))-cell2mat(mldBuse(ss,13)),cell2mat(mldBuse(ss,3)),'r.','markersize',12), hold on
 % plot(cell2mat(mldBuse(mm,9))-cell2mat(mldBuse(mm,13)),cell2mat(mldBuse(mm,3)),'b.','markersize',12)
@@ -454,7 +357,7 @@ colorbar
 X=cell2mat(mldBuse(:,9))-cell2mat(mldBuse(:,13));
 Y=cell2mat(mldBuse(:,3));
 nn=find(~isnan(X) & ~isnan(Y)); X=X(nn); Y=Y(nn);
-[B,BINT,~,~,STATS] = regress(Y,[ones(size(X)) X]); 
+[B,BINT,~,~,STATS] = regress(Y,[ones(size(X)) X]);
 
 subplot(2,4,7)
 plot(sort(X),B(1)+B(2)*sort(X),'k-')
