@@ -28,356 +28,288 @@ figure
 plot(downcast_lon(mvco_ind),downcast_lat(mvco_ind),'.')
 patch([-70.53 -70.53 -70.60 -70.60],[41.3 41.35 41.35 41.3],'k','facecolor','none')
 
+downcast_N2=nan(size(downcast_bins));
+downcast_N2=downcast_N2(1:end-1,:);
+
+mvco_pdens=nan(4,5,length(mvco_ind));
+mvco_delta=nan(3,4,length(mvco_ind));
+mvco_temp=nan(4,5,length(mvco_ind));
 %%
-for q=1:length(mvco_ind);
+for q=47:length(mvco_ind);
     
     col_hdr=CTD_QC(mvco_ind(q)).data_hdr;
     temp_data=CTD_QC(mvco_ind(q)).data;
     
-    pdens_deltas=[0.005 0.01 0.05 0.1];
-    temp_deltas=[0.2 0.4 0.6 0.8 1];
+    %look at when density or temp crosses delta values from a reference: --------------------------------------------
+    pdens_deltas=[0.05 0.1 0.2 0.5];
+    temp_deltas=[0.2 0.5 0.8 1];
     
-    temp_ref=[];
-    pdens_ref=[];
+    %reference as close to surface as possibe:
+    tt=find(~isnan(downcast_temp(:,mvco_ind(q))));
+    temp_ref1=downcast_temp(tt(1),mvco_ind(q)); %first non-nan measurement
+    qq=find(~isnan(downcast_pdens(:,mvco_ind(q))));
+    pdens_ref1=downcast_pdens(qq(1),mvco_ind(q));
     
-    rec_pdens=[pdens_deltas' nan(size(pdens_deltas))'];
-    rec_temp=[temp_deltas' nan(size(temp_deltas))'];
+    %reference at 4 m:
+    rr=find(downcast_bins(:,mvco_ind(q))==4);
+    temp_ref2=downcast_temp(rr,mvco_ind(q)); %first non-nan measurement
+    qq1=find(~isnan(downcast_pdens(:,mvco_ind(q))));
+    pdens_ref2=downcast_pdens(rr,mvco_ind(q));
+       
+    rec_pdens=[pdens_deltas' repmat(tt(1),size(pdens_deltas))' nan(size(pdens_deltas))' repmat(rr,size(pdens_deltas))' nan(size(pdens_deltas))'];
+    rec_temp=[temp_deltas' repmat(qq(1),size(temp_deltas))' nan(size(temp_deltas))' repmat(rr,size(temp_deltas))' nan(size(temp_deltas))'];
     
-    %could do this via indexing....
-    j=1; %counter for depth bins
-    h=1; %counter for values in pdens threshold
-    g=1; %counter for values in temp threshold
-    while j < length(downcast_bins)-1
-        j=j+1;
-        if abs(pdens_ref - downcast_pdens(j,q)) > pdens_deltas(h)
-            rec_pdens(h,2)=downcast_bins(j,q);
-            h=h+1;
+    for w=1:2
+        
+        eval(['pdens_ref=pdens_ref' num2str(w) ';'])
+        eval(['temp_ref=temp_ref' num2str(w) ';'])
+        
+        j=rec_pdens(1,2*w); %counter for depth bins
+        h=1; %counter for values in pdens threshold
+        while j < length(downcast_bins)-1 && h <= length(pdens_deltas)
+            
+            if abs(pdens_ref - downcast_pdens(j,mvco_ind(q))) > pdens_deltas(1,h)
+                rec_pdens(h,2*w+1)=downcast_bins(j,mvco_ind(q));
+                h=h+1;
+            else
+              j=j+1;  
+            end
+            
         end
-        if abs(temp_ref - downcast_temp(j,q)) > temp_deltas(g)
-            rec_temp(h,2)=downcast_bins(j,q);
-            g=g+1;
+        
+        j=rec_temp(1,2*w); %counter for depth bins
+        g=1; %counter for values in temp threshold
+        while j < length(downcast_bins)-1 && g <= length(temp_deltas)
+            
+            if abs(temp_ref - downcast_temp(j,mvco_ind(q))) > temp_deltas(g)
+                rec_temp(g,2*w+1)=downcast_bins(j,mvco_ind(q));
+                g=g+1;
+            else
+                j=j+1;
+            end
         end
     end
     
-    %calculate N2 from binned data:
-    N2=sw_bfrq(downcast_sal(:,q),downcast_temp(:,q),downcast_press(:,q),downcast_lat(q));
+        %density changes based on temp_deltas; just for comparison:
+    for k=1:length(temp_deltas)
+        pdens_deltas(2,k)=sw_pden(downcast_sal(qq(1),mvco_ind(q)),downcast_temp(qq(1),mvco_ind(q))-temp_deltas(k),downcast_press(qq(1),mvco_ind(q)),0) - ...
+            sw_pden(downcast_sal(qq(1),mvco_ind(q)),downcast_temp(qq(1),mvco_ind(q)),downcast_press(qq(1),mvco_ind(q)),0);%-downcast_pdens(qq(1),mvco_ind(q));
+        pdens_deltas(3,k)=sw_pden(downcast_sal(rr,mvco_ind(q)),downcast_temp(rr,mvco_ind(q))-temp_deltas(k),downcast_press(rr,mvco_ind(q)),0) - ...
+            sw_pden(downcast_sal(rr,mvco_ind(q)),downcast_temp(rr,mvco_ind(q)),downcast_press(rr,mvco_ind(q)),0);% -downcast_pdens(rr,mvco_ind(q));
+    end
     
-    clf %see what this metric is highlighting - over all looks pretty good!
-    subplot(2,3,1,'replace'),  hold on
+    %calculate N2 from binned data: --------------------------------------------------
+    N2=sw_bfrq(downcast_sal(:,mvco_ind(q)),downcast_temp(:,mvco_ind(q)),downcast_press(:,mvco_ind(q)),downcast_lat(mvco_ind(q)));
+    downcast_N2(:,mvco_ind(q))=N2;
+    avgN2=nanmean(N2);
+    medN2=nanmedian(N2);
+    [~,im]=max(N2);
+    
+    %     disp(['Max N2: ' num2str(N2(im))])
+    %     disp(['Avg N2: ' num2str(avgN2)])
+    %     disp(['Median N2: ' num2str(medN2)])
+    
+    
+    
+    %plots!
+    %
+    clf %see what metrics are highlighting - over all looks pretty good!
+    subplot(1,4,1,'replace'),  hold on
     %plot(pdens,depth,'k.-')
-    plot(downcast_pdens(:,q),downcast_bins(:,q),'.-','color',[0 0.5 1])
-    plot(pdensU,depthU,'.','color',[1 0.5 0])
-    plot(binned_dataD(:,6),binned_dataD(:,1),'.-')
-    line(xlim,[binned_dataD(im,1) binned_dataD(im,1)],'color','r')
-    line(xlim,[4 4],'color',[0.5 0.5 0.5])
+    plot(downcast_pdens(:,mvco_ind(q)),downcast_bins(:,mvco_ind(q)),'.-','color','k')
+    xlim([min(downcast_pdens(:,mvco_ind(q)))-0.5  max(downcast_pdens(:,mvco_ind(q)))+0.5])
+    %xlim([1024 1026])
+    line(xlim,[rec_pdens(1,3) rec_pdens(1,3)],'color',[0.8 0.8 0.8])
+    line(xlim,[rec_pdens(2,3) rec_pdens(2,3)],'color',[0.6 0.6 0.6])
+    line(xlim,[rec_pdens(3,3) rec_pdens(3,3)],'color',[0.4 0.4 0.4])
+    line(xlim,[rec_pdens(4,3) rec_pdens(4,3)],'color',[0.2 0.2 0.2])
+    
+    text(min(downcast_pdens(:,mvco_ind(q)))-0.5, rec_pdens(1,3)-0.1,num2str(pdens_deltas(1,1)))
+    text(max(downcast_pdens(:,mvco_ind(q)))+0.5, rec_pdens(2,3)-0.1,num2str(pdens_deltas(1,2)))
+    text(min(downcast_pdens(:,mvco_ind(q)))-0.5, rec_pdens(3,3)-0.1,num2str(pdens_deltas(1,3)))
+    text(max(downcast_pdens(:,mvco_ind(q)))+0.5, rec_pdens(4,3)-0.1,num2str(pdens_deltas(1,4)))
+    
+    line(xlim,[rec_pdens(1,5) rec_pdens(1,5)],'linestyle',':','color',[0 0.8 0])
+    line(xlim,[rec_pdens(2,5) rec_pdens(2,5)],'linestyle',':','color',[0 0.6 0])
+    line(xlim,[rec_pdens(3,5) rec_pdens(3,5)],'linestyle',':','color',[0 0.4 0])
+    line(xlim,[rec_pdens(4,5) rec_pdens(4,5)],'linestyle',':','color',[0 0.2 0])
+    
+    text(min(downcast_pdens(:,mvco_ind(q)))-0.5, rec_pdens(1,5)-0.1,num2str(pdens_deltas(1,1)),'color',[0 0.5 0])
+    text(max(downcast_pdens(:,mvco_ind(q)))+0.5, rec_pdens(2,5)-0.1,num2str(pdens_deltas(1,2)),'color',[0 0.5 0])
+    text(min(downcast_pdens(:,mvco_ind(q)))-0.5, rec_pdens(3,5)-0.1,num2str(pdens_deltas(1,3)),'color',[0 0.5 0])
+    text(max(downcast_pdens(:,mvco_ind(q)))+0.5, rec_pdens(4,5)-0.1,num2str(pdens_deltas(1,4)),'color',[0 0.5 0])
+    
     set(gca,'ydir','reverse','fontsize',14)
     xlabel('Potential Density (kg/m^3)') %ylabel(col_hdr{6})
-    title([CTD(mvco_ind(q)).cast_name ':' datestr(file_time) ' : ' num2str(q) ' out of ' num2str(length(mvco_ind))],'interpreter','none')
+    title([CTD(mvco_ind(q)).cast_name ':' datestr(CTD_QC(mvco_ind(q)).upload_time) ' : ' num2str(q) ' out of ' num2str(length(mvco_ind))],'interpreter','none')
     %legend('Obs \rho','Potential \rho','location','NorthWest')
     
-    subplot(2,3,2,'replace'), hold on
-    plot(cast_time,depth,'k.-')
-    plot(cast_timeD,depthD,'.','color',[0 0.5 1])
-    plot(cast_timeU,depthU,'.','color',[1 0.5 0])
+    
+    subplot(1,4,2,'replace'), hold on
+    plot(downcast_temp(:,mvco_ind(q)),downcast_bins(:,mvco_ind(q)),'.-','color',[1 0.5 0])
+    xlim([min(downcast_temp(:,mvco_ind(q)))-0.5  max(downcast_temp(:,mvco_ind(q)))+0.5])
+    
+    line(xlim,[rec_temp(1,3) rec_temp(1,3)],'color',[0.8 0.8 0.8])
+    line(xlim,[rec_temp(2,3) rec_temp(2,3)],'color',[0.6 0.6 0.6])
+    line(xlim,[rec_temp(3,3) rec_temp(3,3)],'color',[0.4 0.4 0.4])
+    line(xlim,[rec_temp(4,3) rec_temp(4,3)],'color',[0.2 0.2 0.2])
+        
+    text(min(downcast_temp(:,mvco_ind(q)))-0.4, rec_temp(1,3)-0.1,[num2str(temp_deltas(1,1)) ' - ' num2str(0.001*round(1000*pdens_deltas(2,1)))])
+    text(max(downcast_temp(:,mvco_ind(q)))+0.3, rec_temp(2,3)-0.1,[num2str(temp_deltas(1,2)) ' - ' num2str(0.001*round(1000*pdens_deltas(2,2)))])
+    text(min(downcast_temp(:,mvco_ind(q)))-0.4, rec_temp(3,3)-0.1,[num2str(temp_deltas(1,3)) ' - ' num2str(0.001*round(1000*pdens_deltas(2,3)))])
+    text(max(downcast_temp(:,mvco_ind(q)))+0.3, rec_temp(4,3)-0.1,[num2str(temp_deltas(1,4)) ' - ' num2str(0.001*round(1000*pdens_deltas(2,4)))])
+        
+    line(xlim,[rec_temp(1,5) rec_temp(1,5)],'linestyle',':','color',[0 0.8 0])
+    line(xlim,[rec_temp(2,5) rec_temp(2,5)],'linestyle',':','color',[0 0.6 0])
+    line(xlim,[rec_temp(3,5) rec_temp(3,5)],'linestyle',':','color',[0 0.4 0])
+    line(xlim,[rec_temp(4,5) rec_temp(4,5)],'linestyle',':','color',[0 0.2 0])
+    
+    text(max(downcast_temp(:,mvco_ind(q)))+0.3, rec_temp(1,5)-0.1,[num2str(temp_deltas(1,1)) ' - ' num2str(0.001*round(1000*pdens_deltas(3,1)))],'color',[0 0.5 0])
+    text(min(downcast_temp(:,mvco_ind(q)))-0.4, rec_temp(2,5)-0.1,[num2str(temp_deltas(1,2)) ' - ' num2str(0.001*round(1000*pdens_deltas(3,2)))],'color',[0 0.5 0])
+    text(max(downcast_temp(:,mvco_ind(q)))+0.3, rec_temp(3,5)-0.1,[num2str(temp_deltas(1,3)) ' - ' num2str(0.001*round(1000*pdens_deltas(3,3)))],'color',[0 0.5 0])
+    text(min(downcast_temp(:,mvco_ind(q)))-0.4, rec_temp(4,5)-0.1,[num2str(temp_deltas(1,4)) ' - ' num2str(0.001*round(1000*pdens_deltas(3,4)))],'color',[0 0.5 0])
+      
     set(gca,'ydir','reverse','fontsize',14)
-    xlabel('Time') %ylabel(col_hdr{6})
-    title('CTD position with time')
+    xlabel('Temperature')
+    title('Temperature with depth')
     
-    subplot(2,3,3,'replace'), hold on
-    plot(N2D,binned_dataD(1:end-1,1),'.-','color',[0 0.5 1])
-    plot(N2U,binned_dataU(1:end-1,1),'r.-','color',[1 0.5 0])
-    line([1e-4 1e-4], get(gca,'ylim'),'color','r') %anything higher than this and you are probably stratified
-    line([avgN2 avgN2], get(gca,'ylim'),'color','c') %average N2
-    
-    plot(N2(im),binned_dataD(im,1),'bp','markersize',12) %max only considering below 3.75m
+    subplot(1,4,3,'replace'), hold on
+    plot(downcast_sal(:,mvco_ind(q)),downcast_bins(:,mvco_ind(q)),'.-','color',[0 0.5 1])
+    xlim([min(downcast_sal(:,mvco_ind(q)))-0.5  max(downcast_sal(:,mvco_ind(q)))+0.5])
     set(gca,'ydir','reverse','fontsize',14)
-    xlabel('Brunt-Vaisala Freq')
-    xlim([-1e-3 1e-2])
-    line(xlim,[4 4],'color',[0.5 0.5 0.5])
-    title('N2 with depth')
+    xlabel('Salinity')
+    title('Salinity with depth')
     
-    subplot(2,3,4,'replace'),  hold on
-    %plot(temperature,depth,'k.-')
-    plot(temperatureD,depthD,'.','color',[0 0.5 1])
-    plot(binned_dataD(:,4),binned_dataD(:,1),'.-')
-    plot(temperatureU,depthU,'.','color',[1 0.5 0])
-    plot(binned_dataU(:,4),binned_dataU(:,1),'r.-')
+    subplot(1,4,4,'replace'), hold on
+    plot(downcast_N2(:,mvco_ind(q)),downcast_bins(1:end-1,mvco_ind(q)),'.-','color',[0 0.7 0])
     set(gca,'ydir','reverse','fontsize',14)
-    xlabel('Temperature (\circC)') %ylabel(col_hdr{6})
-    line(xlim,[4 4],'color',[0.5 0.5 0.5])
-    title('Temperature with Depth')
+    xlabel('N2')
+    title('Brunt-Vaisala with depth')
     
-    subplot(2,3,5,'replace'),  hold on
-    plot(sal,depth,'k.-')
-    plot(salD,depthD,'.','color',[0 0.5 1])
-    plot(binned_dataD(:,3),binned_dataD(:,1),'.-')
-    plot(salU,depthU,'.','color',[1 0.5 0])
-    plot(binned_dataU(:,3),binned_dataU(:,1),'.-')
-    set(gca,'ydir','reverse','fontsize',14)
-    xlabel('Salinity') %ylabel(col_hdr{6})
-    xlim([median(salD)-1 median(salD)+1])
-    line(xlim,[4 4],'color',[0.5 0.5 0.5])
-    title('Salinity with Depth')
-    
-    subplot(2,3,6,'replace'),  hold on
-    plot(cast_time,sal,'k.-')
-    plot(cast_timeD,salD,'.','color',[0 0.5 1])
-    plot(cast_timeU,salU,'.','color',[1 0.5 0])
-    plot(cast_time,depth,'.-')
-    ylabel('Salinity') %ylabel(col_hdr{6})
-    
+    line([1e-4 1e-4], get(gca,'ylim'),'linestyle',':','color','r') %anything higher than this and you are probably stratified
+    line([avgN2 avgN2], get(gca,'ylim'),'color',[0.5 0.5 0.5]) %average N2
+    line([medN2 medN2], get(gca,'ylim'),'color',[0.2 0.2 0.2]) %average N2
+    plot(N2(im),downcast_bins(im,mvco_ind(q)),'pk','markersize',12) %max only considering below 3.75m
     
     
     %Is the water stratified? Or wouldn't be well mixed?
     %Looking at Young-Oh's slide, it looks like the min would be around
     %.25 * 10^-4 N2 (S^{-2})...
     
-    disp(['Max N2: ' num2str(N2(im))])
-    disp(['Avg N2: ' num2str(avgN2)])
-    disp(['Median N2: ' num2str(medN2)])
     
+    %
     keyboard
     
-    %record info:
-    ctd_mix(q).cast_name = CTD(mvco_ind(q)).cast_name;
-    ctd_mix(q).empty_flag = 0;
-    ctd_mix(q).file_time =file_time;
-    
-    %record key processing steps:
-    ctd_mix(q).descent_ind=dsc;
-    ctd_mix(q).upward_ind=usc;
-    ctd_mix(q).binned_downdata=binned_dataD;
-    ctd_mix(q).binned_updata=binned_dataU;
-    ctd_mix(q).bfrq_down=N2D;
-    ctd_mix(q).bfrq_up=N2U;
-    ctd_mix(q).bin_titles=binned_data_titles;
-    
-    %record some metrics and decisions:
-    ctd_mix(q).user_call= user_call;
-    ctd_mix(q).max_N2 = N2(im);
-    ctd_mix(q).depth_maxN2= binned_data(im,1);
-    ctd_mix(q).avg_N2 = avgN2;
-    ctd_mix(q).med_N2= medN2;
-    ctd_mix(q).data_at_4m=[binned_data(ii4,1) N2(ii4) binned_data(ii4,4) binned_data(ii4,6)];
-    ctd_mix(q).data_at_12m=[binned_data(ii12,1) N2(ii12) binned_data(ii12,4) binned_data(ii12,6)];
-    ctd_mix(q).cast_used = upcast_flag;
-    
-    ctd_mix(q).notes=notes;
-    
-    if strcmp(user_call,'mixed')
-        ctd_mix(q).stratification_driver='';
-    else
-        ctd_mix(q).stratification_driver=reason;
-    end
-    
-    %         [Q] = input('Does the automatic finding of N2 look reasonable? If so, enter "auto", if not, enter "manual" \n');
-    %         if any(diff(cast_time) < 0), disp('Something wrong with time sync?'), end
-    
-    
+    mvco_pdens(:,:,q)=rec_pdens;
+    mvco_temp(:,:,q)=rec_temp;
+    mvco_delta(:,:,q)=pdens_deltas;
 end %for loop
 
 
-%% Okay and now some plots to try to make sense of this mess...
+%% and now to plot!
 
-%Compare difference of temp to diff of density, color coded for stratified
-%or not....
+%okay, it seems we have a few types of casts:
+%   surface mini layer, where below 3/4 m, it would be well mixed
+%   a mixed layer somewhere mid depth
+%   just a slow, 14m almost of stratification
+%   nice and fully mixed :)
 
-%first remove empty rows where something went awry:
-jj=find(cell2mat({ctd_mix(:).empty_flag}')==0); %use only good data casts
+%it does seem that a cutoff of 0.2 for a delta in density captures a 'mixed
+%layer nicely':
 
-mix=ctd_mix(jj);
-
-%exclude points that are not close enough to 12m?
-
-%ii=find(abs(cell2mat(mld(jj,10))-12) < 1);
-
-%% label points based on mixed or stratified:
-
-user_call={mix(:).user_call}';
-mm0=find(strcmp(user_call,'mixed'));
-ss0=find(strcmp(user_call,'stratified'));
-
-%by max:
-maxN2=cell2mat({mix(:).max_N2}');
-ss1=find(maxN2 >= 2e-5);
-mm1=find(maxN2 < 2e-5);
-
-% by average:
-avgN2=cell2mat({mix(:).avg_N2}');
-ss2=find(avgN2 >= 2e-5);
-mm2=find(avgN2 < 2e-5);
-
-%by median:
-medN2=cell2mat({mix(:).med_N2}');
-ss3=find(medN2 >= 2e-5);
-mm3=find(medN2 < 2e-5);
-
-%choose an a method for indexing:
-mm=mm0;
-ss=ss0;
-
-time=cell2mat({mix(:).file_time}');
+%identify each type of water column:
+time=cell2mat({CTD_QC(mvco_ind).upload_time}');
 yrdy=find_yearday(time);
-depth_maxN2 = cell2mat({mix(:).depth_maxN2}');
-data_at_4m=cell2mat({mix(:).data_at_4m}');
-data_at_12m=cell2mat({mix(:).data_at_12m}');
+surf=squeeze(mvco_pdens(3,3,:)); %from surface ref
+four=squeeze(mvco_pdens(3,5,:)); %from 4m ref
+
+%% well mixed:
+mm1=find(isnan(surf) & isnan(four));
+mm2=find(surf >= 12 | four >= 12); %ends up being captured just by four
+
+%only surface piece stratified:
+ss=find(surf < 4 & isnan(four));
+
+%layers somewhere in the middle:
+ms=find((surf >= 4 & surf < 12) | four < 12);
 
 
-%% diff in temp vs. diff in dens
+%alright, have all the points!
 
-clf
-% subplot(2,4,1,'replace')
-% plot(cell2mat(mldBuse(ss,2)),cell2mat(mldBuse(ss,3)),'r.','markersize',12), hold on
-% plot(cell2mat(mldBuse(mm,2)),cell2mat(mldBuse(mm,3)),'b.','markersize',12)
-% ylabel('Max N2 (s^{-2})')
-% line(xlim,[3e-4 3e-4],'color',[0.5 0.5 0.5])
-% datetick
-
-%Max N2 by year day:
-subplot(2,4,1,'replace')
-plot(yrdy,maxN2,'.','markersize',12), hold on
-% plot(yrdy(ss),maxN2(ss),'r.','markersize',12), hold on
-% plot(yrdy(mm),maxN2(mm),'b.','markersize',12)
-ylabel('Max N2 (s^{-2})')
-xlim([0 365])
-xlabel('Yearday')
-line(xlim,[2e-5 2e-5],'color',[0.5 0.5 0.5])
-
-%Average N2 by year day:
-subplot(2,4,2,'replace')
-plot(yrdy,avgN2,'.','markersize',12), hold on
-% plot(yrdy(ss),avgN2(ss),'r.','markersize',12), hold on
-% plot(yrdy(mm),avgN2(mm),'b.','markersize',12)
-ylabel('Average N2 (s^{-2})')
-xlim([0 365])
-xlabel('Yearday')
-line(xlim,[2e-5 2e-5],'color',[0.5 0.5 0.5])
-line(xlim,[5e-5 5e-5],'color',[0.5 0.5 0.5])
-
-%Depth of max N2:
-subplot(2,4,3,'replace')
-plot(maxN2,depth_maxN2,'.','markersize',12), hold on
-% plot(maxN2(ss),depth_maxN2(ss),'r.','markersize',12), hold on
-% plot(maxN2(mm),depth_maxN2(mm),'b.','markersize',12)
-xlabel('Max N2 (s^{-2})')
-ylabel('Depth of max N2 (m)')
-set(gca,'Ydir','reverse','Ygrid','on')
-line([2e-5 2e-5],ylim,'color',[0.5 0.5 0.5])
-
-%% Relationship between average N2 and max N2:
-subplot(2,4,4,'replace')
-plot(avgN2,maxN2,'.','markersize',12), hold on
-xlabel('Average N2 (s^{-2})')
-ylabel('Max N2 (s^{-2})')
-
-%% Density difference and max N2
-subplot(2,4,5,'replace')
-% plot(data_at_4m(ss,4)-data_at_12m(ss,4),maxN2(ss),'r.','markersize',12), hold on
-% plot(data_at_4m(mm,4)-data_at_12m(mm,4),maxN2(mm),'b.','markersize',12)
-plot(data_at_4m(:,4)-data_at_12m(:,4),maxN2(:),'.','markersize',12)
-xlabel('Density difference between 4m and 12m (\circC)')
-ylabel('Max N2 (s^{-2})')
-
-subplot(2,4,6,'replace')
-%plot(data_at_4m(ss,4)-data_at_12m(ss,4),avgN2(ss),'r.','markersize',12), hold on
-%plot(data_at_4m(mm,4)-data_at_12m(mm,4),avgN2(mm),'b.','markersize',12)
-plot(data_at_4m(:,4)-data_at_12m(:,4),avgN2(:),'.','markersize',12), hold on
-xlabel('Density difference between 4m and 12m (\circC)')
-ylabel('Average N2 (s^{-2})')
-line(xlim,[2e-5 2e-5],'color',[0.5 0.5 0.5])
-line(xlim,[5e-5 5e-5],'color',[0.5 0.5 0.5])
-
-%% Temperature difference and max N2:
-
-% subplot(2,4,7,'replace')
-% % plot(cell2mat(mldBuse(ss,8))-cell2mat(mldBuse(ss,12)),cell2mat(mldBuse(ss,3)),'r.','markersize',12), hold on
-% % plot(cell2mat(mldBuse(mm,8))-cell2mat(mldBuse(mm,12)),cell2mat(mldBuse(mm,3)),'b.','markersize',12)
-% plot(cell2mat(mldBuse(:,8))-cell2mat(mldBuse(:,12)),cell2mat(mldBuse(:,3)),'r.','markersize',12)
-%
-% xlabel('Temperature difference between 4m and 12m (\circC)')
-% ylabel('Max N2 (s^{-2})')
-
-%legend('N2 >= 1e-4', 'N2 < 1e-4')
-%%
-% subplot(2,4,2,'replace')
-% plot(cell2mat(mldBuse(ss,2)),cell2mat(mldBuse(ss,9))-cell2mat(mldBuse(ss,13)),'r.','markersize',12), hold on
-% plot(cell2mat(mldBuse(mm,2))-cell2mat(mldBuse(mm,12)),cell2mat(mldBuse(mm,9))-cell2mat(mldBuse(mm,13)),'b.','markersize',12)
-% ylabel('Density difference between 4m and 12m (\circC)')
-% datetick
-% set(gca,'xgrid','on')
-
-%% temperature difference between 4-12m and dens difference between 4-12m
-subplot(2,4,7,'replace')
-% plot(data_at_4m(ss,4)-data_at_12m(ss,4),data_at_4m(ss,3)-data_at_12m(ss,3),'r.','markersize',12), hold on
-% plot(data_at_4m(mm,4)-data_at_12m(mm,4),data_at_4m(mm,3)-data_at_12m(mm,3),'b.','markersize',12)
-plot(data_at_4m(:,4)-data_at_12m(:,4),data_at_4m(:,3)-data_at_12m(:,3),'.','markersize',12)
-ylabel('Temperature difference between 4m and 12m (\circC)')
-xlabel('Density difference between 4m and 12m (\circC)')
+clf, hold on
+plot(yrdy(mm1),15*ones(size(mm1)),'b.','markersize',12)
+plot(yrdy(mm2),four(mm2),'b.','markersize',12)
+plot(yrdy(ss),surf(ss),'.','markersize',12,'color',[1 0.3 0])
+plot(yrdy(ms),four(ms),'.','markersize',12,'color',[0.5 0.5 0.5])
 
 
-subplot(2,4,8,'replace')
-% plot(avgN2(ss),data_at_4m(ss,3)-data_at_12m(ss,3),'r.','markersize',12), hold on
-% plot(avgN2(mm),data_at_4m(mm,3)-data_at_12m(mm,3),'b.','markersize',12)
-plot(avgN2(:),data_at_4m(:,3)-data_at_12m(:,3),'.','markersize',12)
-ylabel('Temperature difference between 4m and 12m (\circC)')
-xlabel('Average N2')
+%% okay, and now the density differences at 4m and 12m:
 
-%
-% subplot(2,4,8,'replace')
-% plot(cell2mat(mldBuse(ss,9))-cell2mat(mldBuse(ss,13)),cell2mat(mldBuse(ss,3)),'r.','markersize',12), hold on
-% plot(cell2mat(mldBuse(mm,9))-cell2mat(mldBuse(mm,13)),cell2mat(mldBuse(mm,3)),'b.','markersize',12)
-% xlabel('Density difference between 4m and 12m (\circC)')
-% ylabel('Max N2 (s^{-2})')
+i4=find(downcast_bins(:,1)==4);
+i12=find(downcast_bins(:,1)==12);
 
-% subplot(2,4,6,'replace')
-% plot(cell2mat(mldBuse(ss,8))-cell2mat(mldBuse(ss,12)),cell2mat(mldBuse(ss,3)),'r.','markersize',12), hold on
-% plot(cell2mat(mldBuse(mm,8))-cell2mat(mldBuse(mm,12)),cell2mat(mldBuse(mm,3)),'b.','markersize',12)
-% xlabel('Temperature difference between 4m and 12m (\circC)')
-% ylabel('Max N2 (s^{-2})')
-
-
-%%
 figure
-%subplot(2,4,7,'replace')
-scatter(cell2mat(mldBuse(:,8))-cell2mat(mldBuse(:,12)),cell2mat(mldBuse(:,9))-cell2mat(mldBuse(:,13)),40,find_yearday(cell2mat(mldBuse(:,2))),'filled')
-xlabel('Temperature difference between 4m and 12m (\circC)')
-ylabel('Density difference between 4m and 12m (\circC)')
-
-colormap(jet)
-colorbar
-%in general this is a tight relationship, and gives confidence to use temp
-%diff as a proxy for density diff
-
-%%
-
-%but the real question is how does density (or temp diff) for that matter
-%correlate to actual stratification?
-
-%Brunt Vaisala freq does show a nice correlation with density difference
-X=cell2mat(mldBuse(:,9))-cell2mat(mldBuse(:,13));
-Y=cell2mat(mldBuse(:,3));
-nn=find(~isnan(X) & ~isnan(Y)); X=X(nn); Y=Y(nn);
-[B,BINT,~,~,STATS] = regress(Y,[ones(size(X)) X]);
-
-subplot(2,4,7)
-plot(sort(X),B(1)+B(2)*sort(X),'k-')
-text(0,0.01,['R2: ' num2str(1e-3*round(1000*STATS(1)))])
-
-subplot(2,4,8)
-plot(sort(X),B(1)+B(2)*sort(X),'k-')
-
-
-%% Brunt Vaisala freq does show a nice correlation with density difference,
-%but even more beautiful relationship as log!
-X=cell2mat(mldBuse(:,13))-cell2mat(mldBuse(:,9)); %density difference
-Y=cell2mat(mldBuse(:,3));
-nn=find(~isnan(X) & ~isnan(Y)); X=X(nn); Y=Y(nn);
-[xmin,resnorm,residual] = lsqnonlin(@(theta) lsq_lightcurve(theta,X,Y),[-2 0.01],[-10 -100],[10 1000]);
-
+subplot(1,3,1,'replace')
+hist(downcast_pdens(i12,mvco_ind([mm1;mm2]))-downcast_pdens(i4,mvco_ind([mm1;mm2])));
+title('well mixed')
+subplot(1,3,2,'replace')
+hist(downcast_pdens(i12,mvco_ind(ms))-downcast_pdens(i4,mvco_ind(ms)));
+title('mixed layer at depth')
+subplot(1,3,3,'replace')
+hist(downcast_pdens(i12,mvco_ind(ss))-downcast_pdens(i4,mvco_ind(ss)));
+title('surface stratification')
 
 %%
-Y_hat=xmin(1)*(1-exp(xmin(2)*sort(X)));
-%Y_hat=xmin(1)*(1-exp(-xmin(2)*sort(X)));
-%Y_hat=xmin(1)*(1-exp((xmin(2)./sort(X))));
-plot(sort(X),Y_hat,'r-')
 
+figure
+subplot(1,3,1,'replace')
+hist(downcast_temp(i12,mvco_ind([mm1;mm2]))-downcast_temp(i4,mvco_ind([mm1;mm2])));
+title('well mixed')
+subplot(1,3,2,'replace')
+hist(downcast_temp(i12,mvco_ind(ms))-downcast_temp(i4,mvco_ind(ms)));
+title('mixed layer at depth')
+subplot(1,3,3,'replace')
+hist(downcast_temp(i12,mvco_ind(ss))-downcast_temp(i4,mvco_ind(ss)));
+title('surface stratification')
+%%
+
+figure, subplot(1,2,1,'replace')
+colormap jet
+pdens_diff=[downcast_pdens(i12,mvco_ind)-downcast_pdens(i4,mvco_ind)]';
+temp_diff=[downcast_temp(i12,mvco_ind)-downcast_temp(i4,mvco_ind)]';
+
+[b,~,~,~,stats]=regress(temp_diff,[ones(length(pdens_diff),1) pdens_diff]);
+scatter(pdens_diff,temp_diff,30,yrdy,'filled')
+
+line([0 1],[b(1) b(1)+b(2)])
+
+subplot(1,2,2,'replace'), hold on
+plot(0.2,squeeze(mvco_delta(3,1,:)),'b.')
+plot(0.5,squeeze(mvco_delta(3,2,:)),'k.')
+plot(0.8,squeeze(mvco_delta(3,3,:)),'r.')
+plot(1,squeeze(mvco_delta(3,4,:)),'g.')
+title('calculated denisty changes for a given temperature change')
+
+plot(0.2,nanmean(squeeze(mvco_delta(3,1,:))),'bp')
+plot(0.5,nanmean(squeeze(mvco_delta(3,2,:))),'kp')
+plot(0.8,nanmean(squeeze(mvco_delta(3,3,:))),'rp')
+plot(1,nanmean(squeeze(mvco_delta(3,4,:))),'gp')
+
+%[b2,~,~,~,stats]=regress(temp_deltas',[ones(4,1) nanmean((mvco_delta(3,:,:)),3)'])
+
+%% climatology difference over time:
+
+load /Volumes/Lab_data/MVCO/EnvironmentalData/Tday_beam.mat %from the MVCO tower beam
+eval('beam_years=yearlist;')
+eval('beam_date=mdate_mat;')
+load /Volumes/Lab_data/MVCO/EnvironmentalData/Tall_day.mat %from undersea node
+eval('node_date=mdate;')
+eval('node_years=year;')
+eval('Tday_node=Tday;')
+%%
+beam_avg=nanmean(Tday_beam,2);
+node_avg=nanmean(Tday_node(:,4:end),2);
+avg_diff=nanmean((Tday_beam-Tday_node(:,4:end)),2);
+%%
+clf, plot(1:366,avg_diff,'.'), hold on
+plot(1:366,beam_avg-node_avg,'.')
