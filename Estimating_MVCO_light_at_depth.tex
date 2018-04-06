@@ -109,21 +109,42 @@ So, there seems to be a decent relationship between chl and k, but we only have 
 
 So, now that we may have a rough idea of the light level at certain times of year, we can add another layer of information to guide our estimate. And that is trying to gauge how cells might be mixing within the water column. Typically, MVCO is well mixed, being so shallow, but stratification does happen, particularly in the summer months, and we'd like to be able to say if cells are seeing all of the water column (and light levels) or just part of it (and higher or lower light levels). Density data requires temperature, salinity and depth to calculate, but we would only have some of these variables at two depths (4m at beam, 12m at node), making it difficult to estimate what the entire water column would look like. Furthermore, salinity data at some time points is unreliable, making density estimates unavailable.
 
-So, one idea is to use the temperature difference between the 4m tower beam and 12m to use as a proxy for a stratified water column. Now, with this data, we can't know where the water column is stratified, but it would allow us to say at least if cells are seeing all of the water column or only a portion of it (in which case, we'd use the light level at 4m depth). To see if temperature difference would be a good proxy, we can look at two types of data and ask:
+One idea is to use  temperature difference between the 4m tower beam and 12m as a proxy for density difference. To see if this is a viable idea, we can examine CTD casts: look to see if they have any stratification, and how does this relate to a density difference and then temperature difference at t4 and 12 meters?  
+
+\subsection{processing CTD casts}
+
+The raw CTD casts are located in a folder at: \path{\\maddie\TaylorF\from_Samwise\data\MVCO\}, and in order to keep processing consistent, these raw casts are processed with matlab scripts, rather than using the Seabird software (where it might be ambiguous as to what averaging / quality control is happening). The scripts that do the processing are as follows:
+
 \begin{itemize}
-\item how do temperature differences relate to density differences?
-\item how do density differences relate to stratification?
+\item \path{ctd_raw2cnv_processing.m}: script that process raw CTD data (either .hex or .dat files) into readable .cnv files via Sea-Bird SBE Data (note: script should be run on a machine that has this software installed).
+\item \path{import_ctd_casts.m}: imports processed CTD data (.cnv files) into a structure storage array (calls \path{import_cnv.m})
+\item  \path{import_cnv.m}:  imports .cnv file into matlab variables
 \end{itemize}
 
-To do the later, we will use the Brunt-Vaisala frequency to try to calculate a measure of stability. Looking at Young-Og Kwon's physical oceanography notes, it appears stratification can set in when this frequency is above $0.25 \cdot 10^{-4}$ sec$^{-2}$, which we will use as a rough cut off base. The data types available are CTD casts and data from the density array experiments (a cast of CTD sensors at several locations around MVCO and offshore). The density array data is messy, so we will avoid it for now unless it's absolutely necessary.
-
- \subsection{CTD casts}
-
-The CTD casts are located in a folder at: \path{\\maddie\TaylorF\from_Samwise\data\MVCO\}. Some of these casts have been processed, but many have not. Of the casts that were processed, at this moment, it is unclear what parameters were used to do the binning and generate further products. So, in order to avoid that type of confusion, the script \path{ctd_raw2cnv_processing.m} searches for available CTD casts in the above folder and converts them to a .cnv file by calling the SeaBird SBE Data Processing software. The .cnv (text readable) files have been temporarily stored in: \path{\\sosiknas1\Lab\data\MVCO\processed_CTD_casts\}
+The .cnv (text readable) files have been temporarily stored in: \path{\\sosiknas1\Lab\data\MVCO\processed_CTD_casts\}
 
 %'\textbackslash \textbackslash sosiknas1\textbackslash Lab\_data\textbackslash MVCO\textbackslash processed\_CTD\_casts\textbackslash`
 
-These .cnv files are then imported by \path{import_ctd_casts.m} (which calls on \path{import_cnvfile.m}) and parses the data from each cast into a structure that is then saved. The data though still needs to be quality-controlled, and this is performed in the script \path{CTD_QC.m}, then imports this structure, searches for the downcast portion, does some double checking between up and down casts and then records a few key measurements for specific depths. 
+The data at this point is still raw, and needs further quality control. This is down with the script \path{CTD_QC.m}, which imports the data structure, flags bad casts, searches for downcast portion of good casts, averages downcast data over 0.2m bins, and allows user to manually remove bad data points. Quality controlled data is stored as \path{MVCO_QC_CTD_data.mat}. 
+
+The next step is to identify casts as either well mixed or have some evidence of stratification, suggesting a barrier to mixing. At first, I thought I could do this using the Brunt-Vaisala frequency as an indicator, but this seems to take into account the location gradients, that may or may not be indicative of true layers. (Maybe this works better for deeper water columns or coarser CTD resolution? Not sure...) At any rate, Al Pludderman (from PO department) pointed me to some well-established metrics of defining a mixed layer based on changes in density or temperature from a surface reference value. In short, the way it works is choose a surface reference value that you trust (CTD data within the first few meters can be messy), and from this value, find the depth at which density or temperature has increased or decreased past a threshold value. Some papers that look into this are Kara et al. (2000) and Brainerd and Gregg (1995), the latter which looks into how mixed layer depth metrics actually correspond to mixing.
+
+Turns out that finding the depth at which density crosses a fixed threshold ($\delta$) from a surface reference does a pretty good job of identifying a mixed layer. Threshold values can vary, based on season or location, but for MVCO, around $\delta0.2$ seems to do a good job. The casts taken around MVCO seem to fall into one of three types:
+
+\begin{itemize}
+
+\item well mixed: water column is homogeneous
+\item surface level: strong stratification at the surface (typically $<$ 3 or 4 m) either from fresh water or daily warming, with layer underneath well mixed and uniform to bottom
+\item mid-layers: mixed layer from surface (or under surface layer) until pycnocline appears at middle depths 
+\item stratification through-out: whole water column is a pycnocline!
+\end{itemize}
+
+Most of the casts available (104 at present, but only 72 unique days) were well mixed, and from looking at the casts taken on the same day, the water column can change quite rapidly (indicating possible daily stratification and break down, which would be normal for a site at this shallow depth). From this data and classification though
+
+
+
+
+
 
 %\subsection{}
 

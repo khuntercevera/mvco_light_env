@@ -208,6 +208,51 @@ end %for loop
 
 %% and now to plot!
 
+%a look at the casts that were taken on the same day:
+time=cell2mat({CTD_QC(mvco_ind).upload_time}');
+yrdy=find_yearday(time);
+[unqdays, ia, ic]=unique(floor(time));
+repeat_days=unique(floor(time(setxor(ia,1:length(time)))));
+
+%%
+for j=1:length(repeat_days)
+   ii=find(floor(time)==repeat_days(j));
+   for i=1:length(ii)
+    subplot(1,length(ii),i)
+    
+    rec_pdens=mvco_pdens(:,:,ii(i));
+    plot(downcast_pdens(:,mvco_ind(ii(i))),downcast_bins(:,mvco_ind(ii(i))),'.-','color','k')
+    xlim([min(downcast_pdens(:,mvco_ind(ii(i))))-0.5  max(downcast_pdens(:,mvco_ind(ii(i))))+0.5])
+    %xlim([1024 1026])
+    line(xlim,[rec_pdens(1,3) rec_pdens(1,3)],'color',[0.8 0.8 0.8])
+    line(xlim,[rec_pdens(2,3) rec_pdens(2,3)],'color',[0.6 0.6 0.6])
+    line(xlim,[rec_pdens(3,3) rec_pdens(3,3)],'color',[0.4 0.4 0.4])
+    line(xlim,[rec_pdens(4,3) rec_pdens(4,3)],'color',[0.2 0.2 0.2])
+    
+    text(min(downcast_pdens(:,mvco_ind(ii(i))))-0.5, rec_pdens(1,3)-0.1,num2str(pdens_deltas(1,1)))
+    text(max(downcast_pdens(:,mvco_ind(ii(i))))+0.5, rec_pdens(2,3)-0.1,num2str(pdens_deltas(1,2)))
+    text(min(downcast_pdens(:,mvco_ind(ii(i))))-0.5, rec_pdens(3,3)-0.1,num2str(pdens_deltas(1,3)))
+    text(max(downcast_pdens(:,mvco_ind(ii(i))))+0.5, rec_pdens(4,3)-0.1,num2str(pdens_deltas(1,4)))
+    
+    line(xlim,[rec_pdens(1,5) rec_pdens(1,5)],'linestyle',':','color',[0 0.8 0])
+    line(xlim,[rec_pdens(2,5) rec_pdens(2,5)],'linestyle',':','color',[0 0.6 0])
+    line(xlim,[rec_pdens(3,5) rec_pdens(3,5)],'linestyle',':','color',[0 0.4 0])
+    line(xlim,[rec_pdens(4,5) rec_pdens(4,5)],'linestyle',':','color',[0 0.2 0])
+    
+    text(min(downcast_pdens(:,mvco_ind(ii(i))))-0.5, rec_pdens(1,5)-0.1,num2str(pdens_deltas(1,1)),'color',[0 0.5 0])
+    text(max(downcast_pdens(:,mvco_ind(ii(i))))+0.5, rec_pdens(2,5)-0.1,num2str(pdens_deltas(1,2)),'color',[0 0.5 0])
+    text(min(downcast_pdens(:,mvco_ind(ii(i))))-0.5, rec_pdens(3,5)-0.1,num2str(pdens_deltas(1,3)),'color',[0 0.5 0])
+    text(max(downcast_pdens(:,mvco_ind(ii(i))))+0.5, rec_pdens(4,5)-0.1,num2str(pdens_deltas(1,4)),'color',[0 0.5 0])
+  
+    title(datestr(time(ii(i))))
+       set(gca,'ydir','reverse','fontsize',14)
+    xlabel('Potential Density (kg/m^3)') %ylabel(col_hdr{6})
+
+   end
+   pause
+end
+
+%%
 %okay, it seems we have a few types of casts:
 %   surface mini layer, where below 3/4 m, it would be well mixed
 %   a mixed layer somewhere mid depth
@@ -218,8 +263,7 @@ end %for loop
 %layer nicely':
 
 %identify each type of water column:
-time=cell2mat({CTD_QC(mvco_ind).upload_time}');
-yrdy=find_yearday(time);
+
 surf=squeeze(mvco_pdens(3,3,:)); %from surface ref
 four=squeeze(mvco_pdens(3,5,:)); %from 4m ref
 
@@ -228,10 +272,10 @@ mm1=find(isnan(surf) & isnan(four));
 mm2=find(surf >= 12 | four >= 12); %ends up being captured just by four
 
 %only surface piece stratified:
-ss=find(surf < 4 & isnan(four));
+ss=find(~isnan(surf) & isnan(four)); %ss=find(surf < 4 & isnan(four));
 
 %layers somewhere in the middle:
-ms=find((surf >= 4 & surf < 12) | four < 12);
+ms=find(four < 12); %ms=find((surf >= 4 & surf < 12) | four < 12);
 
 
 %alright, have all the points!
@@ -242,60 +286,60 @@ plot(yrdy(mm2),four(mm2),'b.','markersize',12)
 plot(yrdy(ss),surf(ss),'.','markersize',12,'color',[1 0.3 0])
 plot(yrdy(ms),four(ms),'.','markersize',12,'color',[0.5 0.5 0.5])
 
+line(xlim,[4 4],'linestyle','--','color',[1 0.3 0])
+line(xlim,[12 12],'linestyle','--','color',[0.5 0.5 0.5])
 
-%% okay, and now the density differences at 4m and 12m:
+%% okay, and now the density & temp differences at 4m and 12m:
 
 i4=find(downcast_bins(:,1)==4);
 i12=find(downcast_bins(:,1)==12);
 
 figure
-subplot(1,3,1,'replace')
+subplot(2,3,1,'replace')
 hist(downcast_pdens(i12,mvco_ind([mm1;mm2]))-downcast_pdens(i4,mvco_ind([mm1;mm2])));
 title('well mixed')
-subplot(1,3,2,'replace')
+subplot(2,3,2,'replace')
 hist(downcast_pdens(i12,mvco_ind(ms))-downcast_pdens(i4,mvco_ind(ms)));
 title('mixed layer at depth')
-subplot(1,3,3,'replace')
+subplot(2,3,3,'replace')
 hist(downcast_pdens(i12,mvco_ind(ss))-downcast_pdens(i4,mvco_ind(ss)));
 title('surface stratification')
 
-%%
-
-figure
-subplot(1,3,1,'replace')
+subplot(2,3,4,'replace')
 hist(downcast_temp(i12,mvco_ind([mm1;mm2]))-downcast_temp(i4,mvco_ind([mm1;mm2])));
 title('well mixed')
-subplot(1,3,2,'replace')
+subplot(2,3,5,'replace')
 hist(downcast_temp(i12,mvco_ind(ms))-downcast_temp(i4,mvco_ind(ms)));
 title('mixed layer at depth')
-subplot(1,3,3,'replace')
+subplot(2,3,6,'replace')
 hist(downcast_temp(i12,mvco_ind(ss))-downcast_temp(i4,mvco_ind(ss)));
 title('surface stratification')
 %%
 
-figure, subplot(1,2,1,'replace')
-colormap jet
 pdens_diff=[downcast_pdens(i12,mvco_ind)-downcast_pdens(i4,mvco_ind)]';
 temp_diff=[downcast_temp(i12,mvco_ind)-downcast_temp(i4,mvco_ind)]';
 
 [b,~,~,~,stats]=regress(temp_diff,[ones(length(pdens_diff),1) pdens_diff]);
-scatter(pdens_diff,temp_diff,30,yrdy,'filled')
 
+
+figure, subplot(1,3,1,'replace')
+colormap jet
+scatter(pdens_diff,temp_diff,30,yrdy,'filled')
 line([0 1],[b(1) b(1)+b(2)])
 
-subplot(1,2,2,'replace'), hold on
-plot(0.2,squeeze(mvco_delta(3,1,:)),'b.')
-plot(0.5,squeeze(mvco_delta(3,2,:)),'k.')
-plot(0.8,squeeze(mvco_delta(3,3,:)),'r.')
-plot(1,squeeze(mvco_delta(3,4,:)),'g.')
-title('calculated denisty changes for a given temperature change')
 
-plot(0.2,nanmean(squeeze(mvco_delta(3,1,:))),'bp')
-plot(0.5,nanmean(squeeze(mvco_delta(3,2,:))),'kp')
-plot(0.8,nanmean(squeeze(mvco_delta(3,3,:))),'rp')
-plot(1,nanmean(squeeze(mvco_delta(3,4,:))),'gp')
+subplot(1,3,2,'replace'), hold on
+plot(pdens_diff(mm),temp_diff(mm),'b.','markersize',12)
+plot(pdens_diff(ss),temp_diff(ss),'.','markersize',12,'color',[1 0.3 0])
+plot(pdens_diff(ms),temp_diff(ms),'.','markersize',12,'color',[0.5 0.5 0.5])
+line([0 1],[b(1) b(1)+b(2)],'color','k')
+
 
 %[b2,~,~,~,stats]=regress(temp_deltas',[ones(4,1) nanmean((mvco_delta(3,:,:)),3)'])
+
+%%% hmmm....based on the plots, it looks like, on average, density changes
+%%% by about 0.2 for about 0.5-0.8 degrees...
+
 
 %% climatology difference over time:
 
@@ -313,3 +357,23 @@ avg_diff=nanmean((Tday_beam-Tday_node(:,4:end)),2);
 %%
 clf, plot(1:366,avg_diff,'.'), hold on
 plot(1:366,beam_avg-node_avg,'.')
+
+%%
+%hmmm...climatology does not seem to work too great...let's see what each
+%individual day would be:
+
+yearday=repmat((1:366)',1,14);
+%use a cutoff of 0.6 change in degrees...
+bn_diff=Tday_beam-Tday_node(:,4:end);
+ii=find(~isnan(bn_diff));
+jj=find(bn_diff > 0.6);
+gg=find(bn_diff > 0.5 & bn_diff <= 0.6);
+hh=find(bn_diff <= 0.5);
+%%
+figure, hold on
+plot(yearday(jj),bn_diff(jj),'.','markersize',12,'color',[0.5 0.5 0.5])
+plot(yearday(gg),bn_diff(gg),'.','markersize',12,'color',[1 0.3 0])
+plot(yearday(hh),bn_diff(hh),'.','markersize',12,'color',[0 0 1])
+
+
+
