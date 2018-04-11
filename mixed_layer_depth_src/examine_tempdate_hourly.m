@@ -58,6 +58,7 @@ Temp2004 = [Temp2004; temp_seacat2004];
 %% okay, so now that have raw data loaded, ask:
 %difference within a day?
 %temperature difference within a day?
+year=2001:2017;
 
 mdate_node=[]; Tnode=[];
 for count = 1:length(year),    
@@ -69,6 +70,7 @@ end;
 
 %% find the hourly value for each year:
 
+%this takes awhile! ~30 min!!!
 yearlist=2003:2017;
 
 Tbeam_hour=nan(366*24*length(yearlist),1);
@@ -228,15 +230,49 @@ for year=2003:2017
     
 end
 
-
+% record rough dawn and dusks:
+dawn_dusk=nan(length(unqdays),2);
 for q=1:length(unqdays)
     jj=find(floor(solar_time-4/24)==unqdays(q));
-    ii=find(floor(time_hour-4/24)==unqdays(q)); %unqdays is local time
-
-
+    ee=find(total_Solar(jj) > 5); %find range that is above 5 W/2
+    if ~isempty(ee)
+    [~,~,~,h1,~,~]=datevec(solar_time(jj(ee(1)))-4/24);
+    [~,~,~,h2,~,~]=datevec(solar_time(jj(ee(end)))-4/24);
+    dawn_dusk(q,:)=[h1 h2];
+    end
 end
+
+% just use median values to find light window:
+temp=find_yearday(unqdays);
+med_dd=nan(366,2);
+for j=1:366
+    ii=find(temp==j); %current yearday
+    med_dd(j,:)=[nanmedian(dawn_dusk(ii,1)) nanmedian(dawn_dusk(ii,2))]; 
+end 
+
+%a bit rough, but okay for now...
+
+
+%% okay, now go through and check what time of day stratification happens:
+
+
 % a slighlty more complicated question: how many hours in daylight would
 % the water column be considered 'stratified'? Continuously?
+above_06=nan(length(unqdays),2);
+
+for q=1:length(unqdays)
+    tempyrdy=find_yearday(unqdays(q));
+    %find daylight portion:
+    ii=find((time_hour-4/24) >= (unqdays(q) + med_dd(tempyrdy,1)/24) &  (time_hour-4/24) <= (unqdays(q) + med_dd(tempyrdy,2)/24)  );
+   
+    jj=find( (Tbeam_hour(ii) - Tnode_hour(ii)) >= 0.6); %over 0.6 looks like stratification
+    if ~isempty(jj)
+        above_06(q,:)=[length(jj) length(ii)];
+    end
+   
+end
+
+
 
 %above_06(q,:)= [length(find( (Tbeam_hour(ii)-Tnode_hour(ii)) > 0.6))   length(ii)];
 

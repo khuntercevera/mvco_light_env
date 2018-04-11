@@ -9,9 +9,10 @@
 addpath /Users/kristenhunter-cevera/MVCO_light_at_depth/seawater_ver3_2/
 addpath /Users/kristenhunter-cevera/Documents/MATLAB/mvco_tools/
 
-plotflag=1;
+plotflag=0;
 warning off
 
+load /Users/kristenhunter-cevera/MVCO_light_at_depth/mixed_layer_depth_src/QC_downcast.mat
 %first, find all trips around MVCO:
 
 %% find only trips to tower or node:
@@ -23,7 +24,7 @@ mvco_ind=find(downcast_lat > 41.3 & downcast_lat < 41.35 & downcast_lon < -70.53
 %cellfun('isempty',regexp({CTD_QC(:).cast_name}','(deck)|(test)'))==1)
 %this should be about ~104 casts...
 
-% and if curious, see where all the casts come from...
+%%  and if curious, see where all the casts come from...
 figure
 plot(downcast_lon(mvco_ind),downcast_lat(mvco_ind),'.')
 patch([-70.53 -70.53 -70.60 -70.60],[41.3 41.35 41.35 41.3],'k','facecolor','none')
@@ -35,7 +36,7 @@ mvco_pdens=nan(4,5,length(mvco_ind));
 mvco_delta=nan(3,4,length(mvco_ind));
 mvco_temp=nan(4,5,length(mvco_ind));
 %%
-for q=47:length(mvco_ind);
+for q=1:length(mvco_ind);
     
     col_hdr=CTD_QC(mvco_ind(q)).data_hdr;
     temp_data=CTD_QC(mvco_ind(q)).data;
@@ -55,7 +56,7 @@ for q=47:length(mvco_ind);
     temp_ref2=downcast_temp(rr,mvco_ind(q)); %first non-nan measurement
     qq1=find(~isnan(downcast_pdens(:,mvco_ind(q))));
     pdens_ref2=downcast_pdens(rr,mvco_ind(q));
-       
+    
     rec_pdens=[pdens_deltas' repmat(tt(1),size(pdens_deltas))' nan(size(pdens_deltas))' repmat(rr,size(pdens_deltas))' nan(size(pdens_deltas))'];
     rec_temp=[temp_deltas' repmat(qq(1),size(temp_deltas))' nan(size(temp_deltas))' repmat(rr,size(temp_deltas))' nan(size(temp_deltas))'];
     
@@ -72,7 +73,7 @@ for q=47:length(mvco_ind);
                 rec_pdens(h,2*w+1)=downcast_bins(j,mvco_ind(q));
                 h=h+1;
             else
-              j=j+1;  
+                j=j+1;
             end
             
         end
@@ -90,7 +91,7 @@ for q=47:length(mvco_ind);
         end
     end
     
-        %density changes based on temp_deltas; just for comparison:
+    %density changes based on temp_deltas; just for comparison:
     for k=1:length(temp_deltas)
         pdens_deltas(2,k)=sw_pden(downcast_sal(qq(1),mvco_ind(q)),downcast_temp(qq(1),mvco_ind(q))-temp_deltas(k),downcast_press(qq(1),mvco_ind(q)),0) - ...
             sw_pden(downcast_sal(qq(1),mvco_ind(q)),downcast_temp(qq(1),mvco_ind(q)),downcast_press(qq(1),mvco_ind(q)),0);%-downcast_pdens(qq(1),mvco_ind(q));
@@ -112,93 +113,92 @@ for q=47:length(mvco_ind);
     
     
     %plots!
-    %
-    clf %see what metrics are highlighting - over all looks pretty good!
-    subplot(1,4,1,'replace'),  hold on
-    %plot(pdens,depth,'k.-')
-    plot(downcast_pdens(:,mvco_ind(q)),downcast_bins(:,mvco_ind(q)),'.-','color','k')
-    xlim([min(downcast_pdens(:,mvco_ind(q)))-0.5  max(downcast_pdens(:,mvco_ind(q)))+0.5])
-    %xlim([1024 1026])
-    line(xlim,[rec_pdens(1,3) rec_pdens(1,3)],'color',[0.8 0.8 0.8])
-    line(xlim,[rec_pdens(2,3) rec_pdens(2,3)],'color',[0.6 0.6 0.6])
-    line(xlim,[rec_pdens(3,3) rec_pdens(3,3)],'color',[0.4 0.4 0.4])
-    line(xlim,[rec_pdens(4,3) rec_pdens(4,3)],'color',[0.2 0.2 0.2])
-    
-    text(min(downcast_pdens(:,mvco_ind(q)))-0.5, rec_pdens(1,3)-0.1,num2str(pdens_deltas(1,1)))
-    text(max(downcast_pdens(:,mvco_ind(q)))+0.5, rec_pdens(2,3)-0.1,num2str(pdens_deltas(1,2)))
-    text(min(downcast_pdens(:,mvco_ind(q)))-0.5, rec_pdens(3,3)-0.1,num2str(pdens_deltas(1,3)))
-    text(max(downcast_pdens(:,mvco_ind(q)))+0.5, rec_pdens(4,3)-0.1,num2str(pdens_deltas(1,4)))
-    
-    line(xlim,[rec_pdens(1,5) rec_pdens(1,5)],'linestyle',':','color',[0 0.8 0])
-    line(xlim,[rec_pdens(2,5) rec_pdens(2,5)],'linestyle',':','color',[0 0.6 0])
-    line(xlim,[rec_pdens(3,5) rec_pdens(3,5)],'linestyle',':','color',[0 0.4 0])
-    line(xlim,[rec_pdens(4,5) rec_pdens(4,5)],'linestyle',':','color',[0 0.2 0])
-    
-    text(min(downcast_pdens(:,mvco_ind(q)))-0.5, rec_pdens(1,5)-0.1,num2str(pdens_deltas(1,1)),'color',[0 0.5 0])
-    text(max(downcast_pdens(:,mvco_ind(q)))+0.5, rec_pdens(2,5)-0.1,num2str(pdens_deltas(1,2)),'color',[0 0.5 0])
-    text(min(downcast_pdens(:,mvco_ind(q)))-0.5, rec_pdens(3,5)-0.1,num2str(pdens_deltas(1,3)),'color',[0 0.5 0])
-    text(max(downcast_pdens(:,mvco_ind(q)))+0.5, rec_pdens(4,5)-0.1,num2str(pdens_deltas(1,4)),'color',[0 0.5 0])
-    
-    set(gca,'ydir','reverse','fontsize',14)
-    xlabel('Potential Density (kg/m^3)') %ylabel(col_hdr{6})
-    title([CTD(mvco_ind(q)).cast_name ':' datestr(CTD_QC(mvco_ind(q)).upload_time) ' : ' num2str(q) ' out of ' num2str(length(mvco_ind))],'interpreter','none')
-    %legend('Obs \rho','Potential \rho','location','NorthWest')
-    
-    
-    subplot(1,4,2,'replace'), hold on
-    plot(downcast_temp(:,mvco_ind(q)),downcast_bins(:,mvco_ind(q)),'.-','color',[1 0.5 0])
-    xlim([min(downcast_temp(:,mvco_ind(q)))-0.5  max(downcast_temp(:,mvco_ind(q)))+0.5])
-    
-    line(xlim,[rec_temp(1,3) rec_temp(1,3)],'color',[0.8 0.8 0.8])
-    line(xlim,[rec_temp(2,3) rec_temp(2,3)],'color',[0.6 0.6 0.6])
-    line(xlim,[rec_temp(3,3) rec_temp(3,3)],'color',[0.4 0.4 0.4])
-    line(xlim,[rec_temp(4,3) rec_temp(4,3)],'color',[0.2 0.2 0.2])
+    if plotflag
+        clf %see what metrics are highlighting - over all looks pretty good!
+        subplot(1,4,1,'replace'),  hold on
+        %plot(pdens,depth,'k.-')
+        plot(downcast_pdens(:,mvco_ind(q)),downcast_bins(:,mvco_ind(q)),'.-','color','k')
+        xlim([min(downcast_pdens(:,mvco_ind(q)))-0.5  max(downcast_pdens(:,mvco_ind(q)))+0.5])
+        %xlim([1024 1026])
+        line(xlim,[rec_pdens(1,3) rec_pdens(1,3)],'color',[0.8 0.8 0.8])
+        line(xlim,[rec_pdens(2,3) rec_pdens(2,3)],'color',[0.6 0.6 0.6])
+        line(xlim,[rec_pdens(3,3) rec_pdens(3,3)],'color',[0.4 0.4 0.4])
+        line(xlim,[rec_pdens(4,3) rec_pdens(4,3)],'color',[0.2 0.2 0.2])
         
-    text(min(downcast_temp(:,mvco_ind(q)))-0.4, rec_temp(1,3)-0.1,[num2str(temp_deltas(1,1)) ' - ' num2str(0.001*round(1000*pdens_deltas(2,1)))])
-    text(max(downcast_temp(:,mvco_ind(q)))+0.3, rec_temp(2,3)-0.1,[num2str(temp_deltas(1,2)) ' - ' num2str(0.001*round(1000*pdens_deltas(2,2)))])
-    text(min(downcast_temp(:,mvco_ind(q)))-0.4, rec_temp(3,3)-0.1,[num2str(temp_deltas(1,3)) ' - ' num2str(0.001*round(1000*pdens_deltas(2,3)))])
-    text(max(downcast_temp(:,mvco_ind(q)))+0.3, rec_temp(4,3)-0.1,[num2str(temp_deltas(1,4)) ' - ' num2str(0.001*round(1000*pdens_deltas(2,4)))])
+        text(min(downcast_pdens(:,mvco_ind(q)))-0.5, rec_pdens(1,3)-0.1,num2str(pdens_deltas(1,1)))
+        text(max(downcast_pdens(:,mvco_ind(q)))+0.5, rec_pdens(2,3)-0.1,num2str(pdens_deltas(1,2)))
+        text(min(downcast_pdens(:,mvco_ind(q)))-0.5, rec_pdens(3,3)-0.1,num2str(pdens_deltas(1,3)))
+        text(max(downcast_pdens(:,mvco_ind(q)))+0.5, rec_pdens(4,3)-0.1,num2str(pdens_deltas(1,4)))
         
-    line(xlim,[rec_temp(1,5) rec_temp(1,5)],'linestyle',':','color',[0 0.8 0])
-    line(xlim,[rec_temp(2,5) rec_temp(2,5)],'linestyle',':','color',[0 0.6 0])
-    line(xlim,[rec_temp(3,5) rec_temp(3,5)],'linestyle',':','color',[0 0.4 0])
-    line(xlim,[rec_temp(4,5) rec_temp(4,5)],'linestyle',':','color',[0 0.2 0])
-    
-    text(max(downcast_temp(:,mvco_ind(q)))+0.3, rec_temp(1,5)-0.1,[num2str(temp_deltas(1,1)) ' - ' num2str(0.001*round(1000*pdens_deltas(3,1)))],'color',[0 0.5 0])
-    text(min(downcast_temp(:,mvco_ind(q)))-0.4, rec_temp(2,5)-0.1,[num2str(temp_deltas(1,2)) ' - ' num2str(0.001*round(1000*pdens_deltas(3,2)))],'color',[0 0.5 0])
-    text(max(downcast_temp(:,mvco_ind(q)))+0.3, rec_temp(3,5)-0.1,[num2str(temp_deltas(1,3)) ' - ' num2str(0.001*round(1000*pdens_deltas(3,3)))],'color',[0 0.5 0])
-    text(min(downcast_temp(:,mvco_ind(q)))-0.4, rec_temp(4,5)-0.1,[num2str(temp_deltas(1,4)) ' - ' num2str(0.001*round(1000*pdens_deltas(3,4)))],'color',[0 0.5 0])
-      
-    set(gca,'ydir','reverse','fontsize',14)
-    xlabel('Temperature')
-    title('Temperature with depth')
-    
-    subplot(1,4,3,'replace'), hold on
-    plot(downcast_sal(:,mvco_ind(q)),downcast_bins(:,mvco_ind(q)),'.-','color',[0 0.5 1])
-    xlim([min(downcast_sal(:,mvco_ind(q)))-0.5  max(downcast_sal(:,mvco_ind(q)))+0.5])
-    set(gca,'ydir','reverse','fontsize',14)
-    xlabel('Salinity')
-    title('Salinity with depth')
-    
-    subplot(1,4,4,'replace'), hold on
-    plot(downcast_N2(:,mvco_ind(q)),downcast_bins(1:end-1,mvco_ind(q)),'.-','color',[0 0.7 0])
-    set(gca,'ydir','reverse','fontsize',14)
-    xlabel('N2')
-    title('Brunt-Vaisala with depth')
-    
-    line([1e-4 1e-4], get(gca,'ylim'),'linestyle',':','color','r') %anything higher than this and you are probably stratified
-    line([avgN2 avgN2], get(gca,'ylim'),'color',[0.5 0.5 0.5]) %average N2
-    line([medN2 medN2], get(gca,'ylim'),'color',[0.2 0.2 0.2]) %average N2
-    plot(N2(im),downcast_bins(im,mvco_ind(q)),'pk','markersize',12) %max only considering below 3.75m
-    
-    
+        line(xlim,[rec_pdens(1,5) rec_pdens(1,5)],'linestyle',':','color',[0 0.8 0])
+        line(xlim,[rec_pdens(2,5) rec_pdens(2,5)],'linestyle',':','color',[0 0.6 0])
+        line(xlim,[rec_pdens(3,5) rec_pdens(3,5)],'linestyle',':','color',[0 0.4 0])
+        line(xlim,[rec_pdens(4,5) rec_pdens(4,5)],'linestyle',':','color',[0 0.2 0])
+        
+        text(min(downcast_pdens(:,mvco_ind(q)))-0.5, rec_pdens(1,5)-0.1,num2str(pdens_deltas(1,1)),'color',[0 0.5 0])
+        text(max(downcast_pdens(:,mvco_ind(q)))+0.5, rec_pdens(2,5)-0.1,num2str(pdens_deltas(1,2)),'color',[0 0.5 0])
+        text(min(downcast_pdens(:,mvco_ind(q)))-0.5, rec_pdens(3,5)-0.1,num2str(pdens_deltas(1,3)),'color',[0 0.5 0])
+        text(max(downcast_pdens(:,mvco_ind(q)))+0.5, rec_pdens(4,5)-0.1,num2str(pdens_deltas(1,4)),'color',[0 0.5 0])
+        
+        set(gca,'ydir','reverse','fontsize',14)
+        xlabel('Potential Density (kg/m^3)') %ylabel(col_hdr{6})
+        title([CTD_QC(mvco_ind(q)).cast_name ':' datestr(CTD_QC(mvco_ind(q)).upload_time) ' : ' num2str(q) ' out of ' num2str(length(mvco_ind))],'interpreter','none')
+        %legend('Obs \rho','Potential \rho','location','NorthWest')
+        
+        
+        subplot(1,4,2,'replace'), hold on
+        plot(downcast_temp(:,mvco_ind(q)),downcast_bins(:,mvco_ind(q)),'.-','color',[1 0.5 0])
+        xlim([min(downcast_temp(:,mvco_ind(q)))-0.5  max(downcast_temp(:,mvco_ind(q)))+0.5])
+        
+        line(xlim,[rec_temp(1,3) rec_temp(1,3)],'color',[0.8 0.8 0.8])
+        line(xlim,[rec_temp(2,3) rec_temp(2,3)],'color',[0.6 0.6 0.6])
+        line(xlim,[rec_temp(3,3) rec_temp(3,3)],'color',[0.4 0.4 0.4])
+        line(xlim,[rec_temp(4,3) rec_temp(4,3)],'color',[0.2 0.2 0.2])
+        
+        text(min(downcast_temp(:,mvco_ind(q)))-0.4, rec_temp(1,3)-0.1,[num2str(temp_deltas(1,1)) ' - ' num2str(0.001*round(1000*pdens_deltas(2,1)))])
+        text(max(downcast_temp(:,mvco_ind(q)))+0.3, rec_temp(2,3)-0.1,[num2str(temp_deltas(1,2)) ' - ' num2str(0.001*round(1000*pdens_deltas(2,2)))])
+        text(min(downcast_temp(:,mvco_ind(q)))-0.4, rec_temp(3,3)-0.1,[num2str(temp_deltas(1,3)) ' - ' num2str(0.001*round(1000*pdens_deltas(2,3)))])
+        text(max(downcast_temp(:,mvco_ind(q)))+0.3, rec_temp(4,3)-0.1,[num2str(temp_deltas(1,4)) ' - ' num2str(0.001*round(1000*pdens_deltas(2,4)))])
+        
+        line(xlim,[rec_temp(1,5) rec_temp(1,5)],'linestyle',':','color',[0 0.8 0])
+        line(xlim,[rec_temp(2,5) rec_temp(2,5)],'linestyle',':','color',[0 0.6 0])
+        line(xlim,[rec_temp(3,5) rec_temp(3,5)],'linestyle',':','color',[0 0.4 0])
+        line(xlim,[rec_temp(4,5) rec_temp(4,5)],'linestyle',':','color',[0 0.2 0])
+        
+        text(max(downcast_temp(:,mvco_ind(q)))+0.3, rec_temp(1,5)-0.1,[num2str(temp_deltas(1,1)) ' - ' num2str(0.001*round(1000*pdens_deltas(3,1)))],'color',[0 0.5 0])
+        text(min(downcast_temp(:,mvco_ind(q)))-0.4, rec_temp(2,5)-0.1,[num2str(temp_deltas(1,2)) ' - ' num2str(0.001*round(1000*pdens_deltas(3,2)))],'color',[0 0.5 0])
+        text(max(downcast_temp(:,mvco_ind(q)))+0.3, rec_temp(3,5)-0.1,[num2str(temp_deltas(1,3)) ' - ' num2str(0.001*round(1000*pdens_deltas(3,3)))],'color',[0 0.5 0])
+        text(min(downcast_temp(:,mvco_ind(q)))-0.4, rec_temp(4,5)-0.1,[num2str(temp_deltas(1,4)) ' - ' num2str(0.001*round(1000*pdens_deltas(3,4)))],'color',[0 0.5 0])
+        
+        set(gca,'ydir','reverse','fontsize',14)
+        xlabel('Temperature')
+        title('Temperature with depth')
+        
+        subplot(1,4,3,'replace'), hold on
+        plot(downcast_sal(:,mvco_ind(q)),downcast_bins(:,mvco_ind(q)),'.-','color',[0 0.5 1])
+        xlim([min(downcast_sal(:,mvco_ind(q)))-0.5  max(downcast_sal(:,mvco_ind(q)))+0.5])
+        set(gca,'ydir','reverse','fontsize',14)
+        xlabel('Salinity')
+        title('Salinity with depth')
+        
+        subplot(1,4,4,'replace'), hold on
+        plot(downcast_N2(:,mvco_ind(q)),downcast_bins(1:end-1,mvco_ind(q)),'.-','color',[0 0.7 0])
+        set(gca,'ydir','reverse','fontsize',14)
+        xlabel('N2')
+        title('Brunt-Vaisala with depth')
+        
+        line([1e-4 1e-4], get(gca,'ylim'),'linestyle',':','color','r') %anything higher than this and you are probably stratified
+        line([avgN2 avgN2], get(gca,'ylim'),'color',[0.5 0.5 0.5]) %average N2
+        line([medN2 medN2], get(gca,'ylim'),'color',[0.2 0.2 0.2]) %average N2
+        plot(N2(im),downcast_bins(im,mvco_ind(q)),'pk','markersize',12) %max only considering below 3.75m
+        
+    end
     %Is the water stratified? Or wouldn't be well mixed?
     %Looking at Young-Oh's slide, it looks like the min would be around
     %.25 * 10^-4 N2 (S^{-2})...
     
     
-    %
-    keyboard
+    %keyboard
     
     mvco_pdens(:,:,q)=rec_pdens;
     mvco_temp(:,:,q)=rec_temp;
@@ -216,40 +216,40 @@ repeat_days=unique(floor(time(setxor(ia,1:length(time)))));
 
 %%
 for j=1:length(repeat_days)
-   ii=find(floor(time)==repeat_days(j));
-   for i=1:length(ii)
-    subplot(1,length(ii),i)
-    
-    rec_pdens=mvco_pdens(:,:,ii(i));
-    plot(downcast_pdens(:,mvco_ind(ii(i))),downcast_bins(:,mvco_ind(ii(i))),'.-','color','k')
-    xlim([min(downcast_pdens(:,mvco_ind(ii(i))))-0.5  max(downcast_pdens(:,mvco_ind(ii(i))))+0.5])
-    %xlim([1024 1026])
-    line(xlim,[rec_pdens(1,3) rec_pdens(1,3)],'color',[0.8 0.8 0.8])
-    line(xlim,[rec_pdens(2,3) rec_pdens(2,3)],'color',[0.6 0.6 0.6])
-    line(xlim,[rec_pdens(3,3) rec_pdens(3,3)],'color',[0.4 0.4 0.4])
-    line(xlim,[rec_pdens(4,3) rec_pdens(4,3)],'color',[0.2 0.2 0.2])
-    
-    text(min(downcast_pdens(:,mvco_ind(ii(i))))-0.5, rec_pdens(1,3)-0.1,num2str(pdens_deltas(1,1)))
-    text(max(downcast_pdens(:,mvco_ind(ii(i))))+0.5, rec_pdens(2,3)-0.1,num2str(pdens_deltas(1,2)))
-    text(min(downcast_pdens(:,mvco_ind(ii(i))))-0.5, rec_pdens(3,3)-0.1,num2str(pdens_deltas(1,3)))
-    text(max(downcast_pdens(:,mvco_ind(ii(i))))+0.5, rec_pdens(4,3)-0.1,num2str(pdens_deltas(1,4)))
-    
-    line(xlim,[rec_pdens(1,5) rec_pdens(1,5)],'linestyle',':','color',[0 0.8 0])
-    line(xlim,[rec_pdens(2,5) rec_pdens(2,5)],'linestyle',':','color',[0 0.6 0])
-    line(xlim,[rec_pdens(3,5) rec_pdens(3,5)],'linestyle',':','color',[0 0.4 0])
-    line(xlim,[rec_pdens(4,5) rec_pdens(4,5)],'linestyle',':','color',[0 0.2 0])
-    
-    text(min(downcast_pdens(:,mvco_ind(ii(i))))-0.5, rec_pdens(1,5)-0.1,num2str(pdens_deltas(1,1)),'color',[0 0.5 0])
-    text(max(downcast_pdens(:,mvco_ind(ii(i))))+0.5, rec_pdens(2,5)-0.1,num2str(pdens_deltas(1,2)),'color',[0 0.5 0])
-    text(min(downcast_pdens(:,mvco_ind(ii(i))))-0.5, rec_pdens(3,5)-0.1,num2str(pdens_deltas(1,3)),'color',[0 0.5 0])
-    text(max(downcast_pdens(:,mvco_ind(ii(i))))+0.5, rec_pdens(4,5)-0.1,num2str(pdens_deltas(1,4)),'color',[0 0.5 0])
-  
-    title(datestr(time(ii(i))))
-       set(gca,'ydir','reverse','fontsize',14)
-    xlabel('Potential Density (kg/m^3)') %ylabel(col_hdr{6})
-
-   end
-   pause
+    ii=find(floor(time)==repeat_days(j));
+    for i=1:length(ii)
+        subplot(1,length(ii),i)
+        
+        rec_pdens=mvco_pdens(:,:,ii(i));
+        plot(downcast_pdens(:,mvco_ind(ii(i))),downcast_bins(:,mvco_ind(ii(i))),'.-','color','k')
+        xlim([min(downcast_pdens(:,mvco_ind(ii(i))))-0.5  max(downcast_pdens(:,mvco_ind(ii(i))))+0.5])
+        %xlim([1024 1026])
+        line(xlim,[rec_pdens(1,3) rec_pdens(1,3)],'color',[0.8 0.8 0.8])
+        line(xlim,[rec_pdens(2,3) rec_pdens(2,3)],'color',[0.6 0.6 0.6])
+        line(xlim,[rec_pdens(3,3) rec_pdens(3,3)],'color',[0.4 0.4 0.4])
+        line(xlim,[rec_pdens(4,3) rec_pdens(4,3)],'color',[0.2 0.2 0.2])
+        
+        text(min(downcast_pdens(:,mvco_ind(ii(i))))-0.5, rec_pdens(1,3)-0.1,num2str(pdens_deltas(1,1)))
+        text(max(downcast_pdens(:,mvco_ind(ii(i))))+0.5, rec_pdens(2,3)-0.1,num2str(pdens_deltas(1,2)))
+        text(min(downcast_pdens(:,mvco_ind(ii(i))))-0.5, rec_pdens(3,3)-0.1,num2str(pdens_deltas(1,3)))
+        text(max(downcast_pdens(:,mvco_ind(ii(i))))+0.5, rec_pdens(4,3)-0.1,num2str(pdens_deltas(1,4)))
+        
+        line(xlim,[rec_pdens(1,5) rec_pdens(1,5)],'linestyle',':','color',[0 0.8 0])
+        line(xlim,[rec_pdens(2,5) rec_pdens(2,5)],'linestyle',':','color',[0 0.6 0])
+        line(xlim,[rec_pdens(3,5) rec_pdens(3,5)],'linestyle',':','color',[0 0.4 0])
+        line(xlim,[rec_pdens(4,5) rec_pdens(4,5)],'linestyle',':','color',[0 0.2 0])
+        
+        text(min(downcast_pdens(:,mvco_ind(ii(i))))-0.5, rec_pdens(1,5)-0.1,num2str(pdens_deltas(1,1)),'color',[0 0.5 0])
+        text(max(downcast_pdens(:,mvco_ind(ii(i))))+0.5, rec_pdens(2,5)-0.1,num2str(pdens_deltas(1,2)),'color',[0 0.5 0])
+        text(min(downcast_pdens(:,mvco_ind(ii(i))))-0.5, rec_pdens(3,5)-0.1,num2str(pdens_deltas(1,3)),'color',[0 0.5 0])
+        text(max(downcast_pdens(:,mvco_ind(ii(i))))+0.5, rec_pdens(4,5)-0.1,num2str(pdens_deltas(1,4)),'color',[0 0.5 0])
+        
+        title(datestr(time(ii(i))))
+        set(gca,'ydir','reverse','fontsize',14)
+        xlabel('Potential Density (kg/m^3)') %ylabel(col_hdr{6})
+        
+    end
+    pause
 end
 
 %%
@@ -301,6 +301,7 @@ title('well mixed')
 subplot(2,3,2,'replace')
 hist(downcast_pdens(i12,mvco_ind(ms))-downcast_pdens(i4,mvco_ind(ms)));
 title('mixed layer at depth')
+xlabel('\Delta density between 4 and 12 m (kg/m^{3})')
 subplot(2,3,3,'replace')
 hist(downcast_pdens(i12,mvco_ind(ss))-downcast_pdens(i4,mvco_ind(ss)));
 title('surface stratification')
@@ -311,30 +312,46 @@ title('well mixed')
 subplot(2,3,5,'replace')
 hist(downcast_temp(i12,mvco_ind(ms))-downcast_temp(i4,mvco_ind(ms)));
 title('mixed layer at depth')
+xlabel('\Delta temperature between 4 and 12 m (\circC)')
 subplot(2,3,6,'replace')
 hist(downcast_temp(i12,mvco_ind(ss))-downcast_temp(i4,mvco_ind(ss)));
 title('surface stratification')
-%%
+
+%% Density diff vs. Temp diff:
 
 pdens_diff=[downcast_pdens(i12,mvco_ind)-downcast_pdens(i4,mvco_ind)]';
 temp_diff=[downcast_temp(i12,mvco_ind)-downcast_temp(i4,mvco_ind)]';
 
 [b,~,~,~,stats]=regress(temp_diff,[ones(length(pdens_diff),1) pdens_diff]);
 
-
-figure, subplot(1,3,1,'replace')
+clf, subplot(1,2,1,'replace')
 colormap jet
 scatter(pdens_diff,temp_diff,30,yrdy,'filled')
 line([0 1],[b(1) b(1)+b(2)])
+hbar=colorbar;
+yrdy_labels={'Feb','Apr','Jun','Aug','Oct','Dec'};
+yrdy_ticks=find_yearday(datenum(cell2mat([yrdy_labels' cellstr(repmat('-1-2003',6,1))])));
+set(hbar,'YDir','reverse','ytick',yrdy_ticks,'yticklabel',yrdy_labels)
+set(gca,'box','on','fontsize',18)
+xlabel('Density difference between 4 and 12 m (kg/m^{3})')
+ylabel('Temperature difference between 4 and 12 m (\circC)')
 
-
-subplot(1,3,2,'replace'), hold on
-plot(pdens_diff(mm),temp_diff(mm),'b.','markersize',12)
+subplot(1,2,2,'replace'), hold on
+plot(pdens_diff([mm1; mm2]),temp_diff([mm1; mm2]),'b.','markersize',12)
 plot(pdens_diff(ss),temp_diff(ss),'.','markersize',12,'color',[1 0.3 0])
 plot(pdens_diff(ms),temp_diff(ms),'.','markersize',12,'color',[0.5 0.5 0.5])
 line([0 1],[b(1) b(1)+b(2)],'color','k')
 
+legend('well-mixed','surface stratification','mid-depth stratification')
+text(0,-2.5,['\Delta\delta = ' num2str(1e-3*round(1000*b(1))) ' + ' num2str(1e-3*round(1000*b(2))) '\DeltaT'])
+set(gca,'box','on','fontsize',18)
+xlabel('Density difference between 4 and 12 m (kg/m^{3})')
+ylabel('Temperature difference between 4 and 12 m (\circC)')
+%%
+set(gcf,'color','w')
+addpath /Users/kristenhunter-cevera/Documents/MATLAB/matlab_tools/export_fig_2016/
 
+export_fig /Users/kristenhunter-cevera/MVCO_light_at_depth/figures_for_tex_doc/dens_temp_deltas.pdf
 %[b2,~,~,~,stats]=regress(temp_deltas',[ones(4,1) nanmean((mvco_delta(3,:,:)),3)'])
 
 %%% hmmm....based on the plots, it looks like, on average, density changes

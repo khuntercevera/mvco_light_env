@@ -56,7 +56,7 @@ Below is a plot of the recovered / best guesses for lat and lon. The circles rep
 
  \begin{figure}[h]
 \centering
-\includegraphics[width=0.5\textwidth]{found_latlon.pdf}
+\includegraphics[width=0.5\textwidth]{figures_for_tex_doc/found_latlon.pdf}
 \caption{Recorded latitude and longitude of each cast. Records could be from either the raw datafile or the corresponding MVCO event log. If there was a discrepancy between these two, typically the MVCO event log was favored.}
 \end{figure}
 
@@ -86,7 +86,7 @@ The script \path{k_relationships.m} gives some nice overview plots of where we h
  
  \begin{figure}[h]
 \centering
-\includegraphics[width=\textwidth]{PAR_k_values.pdf}
+\includegraphics[width=\textwidth]{figures_for_tex_doc/PAR_k_values.pdf}
 \caption{Plots generated from \textbf{k\_relationships.m}. A) Position of all available and useable radiometer casts. B) K for PAR calculated. C) K PAR for just the node and tower. D). Average chlorophyll (mg/m3) over year day (chlorophyll averaged over all depths). E) Relationship between calculated K-PAR and average chlorophyll, with fitted power curves. F) Weekly climatologies of average chlorophyll and K-PAR values.}
 \end{figure}
 
@@ -95,7 +95,7 @@ The script \path{k_relationships.m} gives some nice overview plots of where we h
 Another script \url{wavelength.m} looks at the color of light as it changes. For the most part, the light is indeed green, but the max wavelength reaching depths does shuffle about:
  \begin{figure}[h]
 \centering
-\includegraphics[width=\textwidth]{wavelengths.png}
+\includegraphics[width=\textwidth]{figures_for_tex_doc/wavelengths.png}
 \caption{A) and B) showing wavelength profiles at 4m just from different views. Color coded by yearday. C) Wavelength at depth with maximum intensity.}
 \end{figure}
 
@@ -107,9 +107,9 @@ So, there seems to be a decent relationship between chl and k, but we only have 
 
 \section{Estimating a Mixed Layer Depth}
 
-So, now that we may have a rough idea of the light level at certain times of year, we can add another layer of information to guide our estimate. And that is trying to gauge how cells might be mixing within the water column. Typically, MVCO is well mixed, being so shallow, but stratification does happen, particularly in the summer months, and we'd like to be able to say if cells are seeing all of the water column (and light levels) or just part of it (and higher or lower light levels). Density data requires temperature, salinity and depth to calculate, but we would only have some of these variables at two depths (4m at beam, 12m at node), making it difficult to estimate what the entire water column would look like. Furthermore, salinity data at some time points is unreliable, making density estimates unavailable.
+So, now that we may have a rough idea of the light level at certain times of year, we can add another layer of information to guide our estimate. And that is trying to gauge how cells might be mixing within the water column. Typically, MVCO is well mixed, being so shallow, but stratification does happen, particularly in the summer months, and we'd like to be able to say if cells are seeing all of the water column (and light levels) or just part of it (and higher or lower light levels). Density data requires temperature, salinity and depth to calculate, but we would only have some of these variables at two depths (4m at beam, 12m at node), making it difficult to estimate what the entire structure of the water column would look like. Furthermore, salinity data at some time points is unreliable, making density estimates unavailable.
 
-One idea is to use  temperature difference between the 4m tower beam and 12m as a proxy for density difference. To see if this is a viable idea, we can examine CTD casts: look to see if they have any stratification, and how does this relate to a density difference and then temperature difference at t4 and 12 meters?  
+One idea is to use the temperature difference between the 4m tower beam and 12m as a proxy for density difference. To see if this is a viable idea, we can examine CTD casts: look to see if they have any stratification, and how does this relate to a density difference and then temperature difference at 4 and 12 meters?  
 
 \subsection{processing CTD casts}
 
@@ -121,15 +121,15 @@ The raw CTD casts are located in a folder at: \path{\\maddie\TaylorF\from_Samwis
 \item  \path{import_cnv.m}:  imports .cnv file into matlab variables
 \end{itemize}
 
-The .cnv (text readable) files have been temporarily stored in: \path{\\sosiknas1\Lab\data\MVCO\processed_CTD_casts\}
+\noindent The .cnv (text readable) files have been temporarily stored in: \path{\\sosiknas1\Lab\data\MVCO\processed_CTD_casts\}
 
 %'\textbackslash \textbackslash sosiknas1\textbackslash Lab\_data\textbackslash MVCO\textbackslash processed\_CTD\_casts\textbackslash`
 
 The data at this point is still raw, and needs further quality control. This is done with the script \path{CTD_QC.m}, which imports the data structure, flags bad casts, searches for downcast portion of good casts, averages downcast data over 0.2m bins, and allows user to manually remove bad data points. Quality controlled data is stored as \path{QC_downcast.mat}. 
 
-The next step is to identify casts as either well mixed or have some evidence of stratification, suggesting a barrier to mixing. At first, I thought I could do this using the Brunt-Vaisala frequency as an indicator, but this seems to take into account the location gradients, that may or may not be indicative of true layers. (Maybe this works better for deeper water columns or coarser CTD resolution? Not sure...) At any rate, Al Pludderman (from PO department) pointed me to some well-established metrics of defining a mixed layer based on changes in density or temperature from a surface reference value. In short, choose a surface reference value that you trust (CTD data within the first few meters can be unreliable), and from this value, find the depth at which density or temperature has increased or decreased past a threshold value. Some papers that look into this are Kara et al. (2000) and Brainerd and Gregg (1995), the latter which looks into how mixed layer depth metrics actually correspond to mixing.
+The next step is to identify casts as either well mixed or have some evidence of stratification, suggesting a barrier to mixing. At first, I thought I could do this using the Brunt-Vaisala frequency as an indicator, but this seems to take into account local gradients, that may or may not be indicative of true layers. (Maybe this works better for deeper water columns or coarser CTD resolution? not sure...) At any rate, Al Pludderman (from PO department) pointed me to some well-established metrics of defining a mixed layer based on changes in density or temperature from a surface reference value. In short, choose a surface reference value that you trust (CTD data within the first few meters can be unreliable), and from this value, find the depth at which density or temperature has increased or decreased past a threshold value. Some papers that look into this are Kara et al. (2000) and Brainerd and Gregg (1995), the latter which looks into how mixed layer depth metrics actually correspond to mixing.
 
-Turns out that finding the depth at which density crosses a fixed threshold ($\Delta$) from a surface reference does a pretty good job of identifying a mixed layer. Threshold values can vary, based on season or location, but for MVCO, around $\Delta0.2$ seems to do a good job. The casts taken around MVCO seem to fall into one of four types:
+Turns out that finding the depth at which density crosses a fixed threshold ($\Delta$) from a surface reference does a pretty good job of identifying a mixed layer. Threshold values can vary, based on season or location, but for MVCO, around $\Delta0.2$ kg/m$^3$ for density seems to do a good job. The casts taken around MVCO seem to fall into one of four types:
 
 \begin{itemize}
 
@@ -141,13 +141,18 @@ Turns out that finding the depth at which density crosses a fixed threshold ($\D
 
 Most of the casts available (104 at present, but only 72 unique days) were well mixed, and from looking at the casts taken on the same day, the water column can change quite rapidly (indicating possible daily stratification and break down, which would be normal for a site at this shallow depth). 
 
-However, we do not have a high resolution CTD record. What we do have is $\sim$ continuous temperature and salinity data at the beam and the node. The  goal though is to evaluate how differences in these two measurements may serve as a proxy for temperature or density across the water column. So we can calculate the change in temperature or density from 4m and 12m in the cast and see how well this relates to classificaiton of the water column (which used the whole profile). In general, this is not bad (although a change in density and temperature will miss cases where there is just surface stratification). We also find that, in general, change in temperature strongly correlates to change in density, making just a change in temperature a useful metric.
+ The  goal though is to evaluate how differences in these two measurements may serve as a proxy for temperature or density across the water column. So we can calculate the change in temperature or density from 4m and 12m in the cast and see how well this relates to the classification of the water column (which used the whole profile). In general, this is not bad (although a change in density and temperature will miss cases where there is just surface stratification). We also find that, in general, a change in temperature strongly correlates to change in density, lending support to using just temperature as a proxy for density:
 
-Figures!
+ \begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{figures_for_tex_doc/dens_temp_deltas.pdf}
+\caption{A) and B) shows relationship between the difference in potential density at 4 and 12 m and the difference in temperature for those two depths, recorded in the CTD cast. B) is color-coded based on stratification classification.}
+\end{figure}
 
 
-A $\Delta0.2$ in density corresponds to around $\sim0.6$ degree temperature change. When looking at the temperature differences between beam and node, we find that if averaged over the day, this difference in temperature is typically reached only in the summer, and (curiously) in the winter...
+\noindent A $\Delta0.2$ in density corresponds to around $\sim0.65 ^{\circ}$C temperature change (based on the linear regression curve in Fig. 4B, although, one could calculate this based on equation of state of seawater...). Using this as a cutoff (or even slightly more lenient cutoff of $\sim0.6 ^{\circ}$C), we can now look over the entire timeseries of beam (4 m ) and node (12 m) temperature records to get an idea of seasonal stratification! Woo!
 
+Looking at the daily averaged temperature records for the beam and node is not quite enough, as this average can be misleading by aggregating over day and night. Instead, we look at hourly time points to see 1) how the water column can change over the day and 2) see how many hours of the daylight portion would be considered 'stratified'. These actions are done with the script \path{examine_tempdate_hourly.m}
 
 
 
