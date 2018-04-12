@@ -152,9 +152,23 @@ Most of the casts available (104 at present, but only 72 unique days) were well 
 
 \noindent A $\Delta0.2$ in density corresponds to around $\sim0.65 ^{\circ}$C temperature change (based on the linear regression curve in Fig. 4B, although, one could calculate this based on equation of state of seawater...). Using this as a cutoff (or even slightly more lenient cutoff of $\sim0.6 ^{\circ}$C), we can now look over the entire timeseries of beam (4 m ) and node (12 m) temperature records to get an idea of seasonal stratification! Woo!
 
-Looking at the daily averaged temperature records for the beam and node is not quite enough, as this average can be misleading by aggregating over day and night. Instead, we look at hourly time points to see 1) how the water column can change over the day and 2) see how many hours of the daylight portion would be considered 'stratified'. These actions are done with the script \path{examine_tempdate_hourly.m}
+Looking at the daily averaged temperature records for the beam and node is not quite enough, as this average can be misleading by aggregating over day and night. Instead, we look at hourly time points to see 1) how the water column can change over the day and 2) see how many hours of the daylight portion would be considered 'stratified'. These actions are done with the script \path{examine_tempdate_hourly.m}.
 
+It seems that the change in temperature over a day can vary quite a bit (up to a few degrees for both beam and node temperature records). The maximim difference between these two records for a given hour shows a curious seasonality, with the largest differences observed in winter and summer:
 
+ \begin{figure}[h]
+\centering
+\includegraphics[width=0.6\textwidth]{figures_for_tex_doc/hourly_deltaT_by_yearday.pdf}
+\caption{Hourly difference in temperature between 4 and 12 plotted against yearday for that hour.}
+\end{figure}
+
+For the second question, we find that a majority of hours during a day seems to be well mixed. With the exemption of days in summer and in winter, very few days would be stratified as to limit cell movement within the water column (although we still have no idea of how fast these cells would be mixing...).  Figure 6 illustrates this by showing a weekly bin bar graph of days available for that week and how many days had what percentage of their hours `stratified' as based on the $\Delta0.6 ^{\circ}$C proxy.
+
+ \begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{figures_for_tex_doc/percentage_hours_stratified.pdf}
+\caption{Bar graph showing how many days found in a given week (over the entire time series) had a certain percentage of daylight hours consideder `stratifed' based on the $\Delta0.6 ^{\circ}$C proxy. The low number at the end of the year is for leap year days.}
+\end{figure}
 
 
 %\subsection{}
