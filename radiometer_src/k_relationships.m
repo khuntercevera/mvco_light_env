@@ -162,6 +162,8 @@ title('k for just tower and node locations')
 
 load /Users/kristenhunter-cevera/Documents/MATLAB/MVCO_Syn_analysis/mvco_chlrep.mat
 
+%load /Volumes/Lab_data/Grazers/EnvironmentalData/grazer_environmental_data.mat
+
 %chlavg - those titles are:
 %col 1: average of all replicates for whole chl
 %col 2: average of all replicates for < 10 um chl
@@ -255,7 +257,19 @@ text(0.2,0.45,['Tower data: ' num2str(X1(1)) 'x^{' num2str(X1(2)) '}'],'color',[
 text(0.2,0.42,['All data: ' num2str(X2(1)) 'x^{' num2str(X2(2)) '}'])
 text(0.2,0.39,'Morel 1988: 0.121x^{0.428}','color',[0.4 0.4 0.4])
 
+%% what about a linear form??
 
+tn=find(k_values(:,8)==3 | k_values(:,8)==4); %tower or node values
+x = chl_match(tn,2);
+y = -k_values(tn,5);
+nn=find(~isnan(x) & ~isnan(y));
+[b,~,~,~,stats] = regress(y(nn),[ones(length(nn),1) x(nn)]);
+
+%%
+x = chl_match(:,2);
+y = -k_values(:,5);
+nn=find(~isnan(x) & ~isnan(y));
+[b,~,~,~,stats] = regress(sqrt(y(nn)),[ones(length(nn),1) x(nn)]);
 
 %% Climatologies...
 
@@ -333,7 +347,7 @@ k_water=interp1(Morel2001(:,1), Morel2001(:,2),lambdas);
 
 % [~, im]=min(abs(Morel2001(:,1)-lambdas(w))); %if don't want to interpolate and just use closest wavelength....
 %k_bio=k_lambdas(:,w)-Morel2001(im,2);
-
+test=[0:0.2:10];
 k_bio=k_lambdas-repmat(k_water,92,1);
 
 %do a linear regression of log-log transformed data to match with
@@ -375,7 +389,7 @@ for w=1:length(lambdas)
         
         set(gcf,'color','w')
         
-        %pause
+        pause
         
     end
 end
@@ -446,6 +460,45 @@ plot(rec(:,1),k_MVCO,'m.:')
 
 xlim([400 700])
 
+
+%% color coded k-lambda plot?
+
+clf, hold on
+cc=jet(5);
+tn=find(k_values(:,8)==3 | k_values(:,8)==4); 
+
+count1=0; count2=0; count3=0; count4=0;
+
+seasons=[1 90;
+91 180;
+181 274;
+275 366];
+
+%marker_types={'.','o','^','p','s'};
+dy=unique(k_values(tn,2));
+
+for q=1:length(dy)
+    
+    qq=find(k_values(tn,2)==dy(q));
+    
+    temp=unique(k_values(tn(qq),1));
+    if  temp >= seasons(1,1) && temp <= seasons(1,2)
+        plotnum=1; count1=count1+1; count=count1;
+    elseif temp >= seasons(2,1) && temp <= seasons(2,2)
+        plotnum=2;  count2=count2+1; count=count2;
+    elseif temp >= seasons(3,1) && temp <= seasons(3,2)
+        plotnum=3; count3=count3+1; count=count3;
+    elseif temp >= seasons(4,1) && temp <= seasons(4,2)
+        plotnum=4; count4=count4+1; count=count4;
+    end
+    
+    subplot(1,4,plotnum)
+    plot(lambdas, k_lambdas(tn(qq),:),'.-','color',cc(count,:))
+%     plot(lambdas, k_lambdas(tn(qq),:),'-','color',cc(temp,:),'marker',marker_types{count})
+    
+    hold on
+    plot(lambdas,k_water,'k:')
+end
 
 
 %% Interpolate avg k values for each day of year

@@ -1,5 +1,8 @@
 % Script to look at how the spectral quality of light changes with time:
 
+%below is a bit convoluted...lots of different thigns recorded, etc...not
+%the easiest to deal with or revisit...
+
 %% A time series plot of K_d values!
 
 %sourcepath=fullfile('\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\processed_radiometer_files\'); % path to folders with raw data...
@@ -16,11 +19,15 @@ datafolders = foldernames(cellfun('isempty',temp)==0);
 load(fullfile(sourcepath,'good_data_folders.mat'))
 
 %%
-wv_record=[];
+wv_record=[]; %information about files
 wv_log={};
-wv_spectra={};
-plotflag=1;
+wv_spectra={}; %holds spectra
+plotflag=0;
 %extraplotflag=1;
+wv_spectra_titles={'dw spectra at 4m'; 'corresponding solal spectra for 4m';
+   'dw spectra at 8m'; 'corresponding solal spectra for 8m';
+   'dw spectra at 12 m'; 'corresponding solal spectra for 12m';};
+
 
 for foldernum=good_data' %are these the ones with lat/lon?
     
@@ -60,7 +67,7 @@ for foldernum=good_data' %are these the ones with lat/lon?
                 
             elseif K_PAR(filenum).flag==3; %k-par was piecewise linear, only investigate first fit
                 
-                impr=K_PAR(filenum).depth_index1;
+                impr=K_PAR(filenum).depth_index1; %downcast 
                 ipar=K_PAR(filenum).par_index1;
                 
             end
@@ -71,7 +78,7 @@ for foldernum=good_data' %are these the ones with lat/lon?
             
             %temp matrix of max wv at each depth
             [~, ii]=max(edl(ipar,:),[],2); %find max light level at each depth record
-            max_wv=[depth(impr) wv(ii)]; %temp record
+            max_wv=[depth(impr) wv(ii)]; %[depth    wavelength of max energy at that depth]
             
             %indexes that correspond to different depth windows:
             i4=find(max_wv(:,1)>3.5 & max_wv(:,1)<4.5);
@@ -115,9 +122,9 @@ for foldernum=good_data' %are these the ones with lat/lon?
             wv_record=[wv_record; datenum(datestr(datafolders{foldernum})) location(filenum).lat location(filenum).lon max_wv_sol r4 r8 r12];
             wv_log=[wv_log; {datafolders{foldernum}} {foldernum} {K_PAR(filenum).file} {location(filenum).file} location(filenum).eventnum {K_PAR(filenum).NOTES} {location(filenum).notes}];
             
-            if isempty(i4), sp4={''}; sol4={''}; else sp4={edl(ipar(i4),:)}; sol4={esl(i4_sol,:)};end
-            if isempty(i8), sp8={''}; sol8={''}; else sp8={edl(ipar(i8),:)}; sol8={esl(i8_sol,:)};end
-            if isempty(i12), sp12={''}; sol12={''};  else sp12={edl(ipar(i12),:)}; sol12={esl(i12_sol,:)}; end
+            if isempty(i4), sp4={[]}; sol4={[]}; else sp4={edl(ipar(i4),:)}; sol4={esl(i4_sol,:)};end
+            if isempty(i8), sp8={[]}; sol8={[]}; else sp8={edl(ipar(i8),:)}; sol8={esl(i8_sol,:)};end
+            if isempty(i12), sp12={[]}; sol12={[]};  else sp12={edl(ipar(i12),:)}; sol12={esl(i12_sol,:)}; end
             
             wv_spectra=[wv_spectra; sp4 sol4 sp8 sol8 sp12 sol12];
             
@@ -181,7 +188,7 @@ for foldernum=good_data' %are these the ones with lat/lon?
                 xlabel('Depth (m)')
                 ylabel('Wavelength of maximum irradiance (nm)')
                 
-                keyboard
+                %keyboard
             end
         end
     end
@@ -232,7 +239,7 @@ cc=jet(366);
 [~,is]=sort(wv_record(:,1));
 for q=1:size(wv_record,1)
     plot(wv,wv_spectra{is(q),1}./repmat(max(wv_spectra{is(q),1},[],2),1,size(wv_spectra{is(q),1},2)),'.-','color',cc(wv_record(is(q),1),:))
-    pause(0.2)
+    pause
 end
 
 %What I'd also like to do is record a set of casts, and then plot these
@@ -263,6 +270,100 @@ zlabel('Relative distrbution')
 %view([32  34]) %for subplot2
 view([-24 42.8]) %for subplot1
 
+%% Or even better a heatmap!
+
+
+%let's only use tower or node casts...
+%and spectra at 4 m ....
+
+unqdaylist=unique(wv_record(tn,2));
+
+rel_sp4=nan(137,14); 
+rel_sp8=nan(137,14);  
+rel_sp12=nan(137,14); 
+y=[];
+ 
+for q=1:size(unqdaylist,1)
+  
+    qq=find(wv_record(tn,2)==unqdaylist(q));
+    disp([num2str(length(qq)) ' tower/node casts: ' datestr(unqdaylist(q))])
+    %spectra at 4m:
+%     if wv_record(tn(is(q)),2) ~= tempday
+%         rel_sp=[rel_sp NaN(length(wv),3)];
+%         tempday=wv_record(tn(is(q)),2); %if not, replace with current date being evaluated
+%     end
+    
+    all_spectra4=cell2mat(wv_spectra(tn(qq),1));    
+    all_spectra4(all_spectra4<0)=0; %hmmm...some measurement noise and offsets?
+    temp4=closure(all_spectra4);
+    norm_spectra4=center(temp4);
+    %take compositional mean of these? or have just max at 1?
+
+    all_spectra8=cell2mat(wv_spectra(tn(qq),3));    
+    all_spectra8(all_spectra8<0)=0; %hmmm...some measurement noise and offsets?
+    temp8=closure(all_spectra8);
+    norm_spectra8=center(temp8);
+    
+    all_spectra12=cell2mat(wv_spectra(tn(qq),5));      
+    all_spectra12(all_spectra12<0)=0; %hmmm...some measurement noise and offsets?
+    temp12=closure(all_spectra12);
+    norm_spectra12=center(temp12);
+
+    subplot(1,3,1,'replace')
+    plot(wv, temp4,'.-','color',[0.5 0.5 0.5]), hold on
+    plot(wv,norm_spectra4,'b.-')
+        
+    subplot(1,3,2,'replace')
+    if ~isempty(all_spectra8)
+    plot(wv, temp8,'.-','color',[0.5 0.5 0.5]), hold on
+    plot(wv,norm_spectra8,'b.-')
+    end
+    
+    subplot(1,3,3,'replace')
+    if ~isempty(all_spectra12)
+    plot(wv, temp12,'.-','color',[0.5 0.5 0.5]), hold on
+    plot(wv,norm_spectra12,'b.-')
+    end
+    
+    pause
+    %if this looks good, record for that day:
+
+    rel_sp4(:,q)= norm_spectra4';
+    if ~isempty(all_spectra8) rel_sp8(:,q)=norm_spectra8'; end
+    if ~isempty(all_spectra12), rel_sp12(:,q)=norm_spectra12'; end
+    
+    y=[y unqdaylist(q)];
+    
+end
+
+%%
+
+[~,is]=sort(find_yearday(y));
+subplot(1,3,1,'replace')
+imagesc(find_yearday(y(is)),wv,rel_sp4(:,is))
+
+subplot(1,3,2,'replace')
+imagesc(find_yearday(y(is)),wv,rel_sp8(:,is))
+
+subplot(1,3,3,'replace')
+imagesc(find_yearday(y(is)),wv,rel_sp12(:,is))
+
+%% towards publication figure....
+
+figure, 
+imagesc(find_yearday(y(is)),wv,rel_sp12(:,is))
+xlabel('Yearday')
+ylabel('Wavelength (nm)')
+hbar=colorbar;
+line(xlim,[540 540],'color',[0.5 0.5 0.5])
+line(xlim,[495 495],'color',[0.5 0.5 0.5])
+line(xlim,[560 560],'color',[0.5 0.5 0.5])
+set(hbar,'location','northoutside')
+
+%Ooh! Put the syn emission spectra right next to them!
+%Ooh! and then and then put the lambda specific wavelengths next to them!
+
+
 %% An example plot of solar and wavelengths for 4m, 8m, 12m depths
 q=30;
 figure,hold on
@@ -274,8 +375,4 @@ plot(wv,wv_spectra{q,5},'.-','color',[0 0 0.6])
 plot(wv,wv_spectra{q,2},'.-','color',[0.6 0.6 0.6])
 plot(wv,wv_spectra{q,4},'.-','color',[0.4 0.4 0.4])
 plot(wv,wv_spectra{q,6},'.-','color',[0.2 0.2 0.2])
-%% And now, let's look at individual wavelength attentuation relationships with chlorophyll...
-
-%A better comparison with Morel?
-
 
