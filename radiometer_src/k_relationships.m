@@ -80,6 +80,7 @@ end
 %add in yearday:
 k_values=[find_yearday(k_values(:,1)) k_values];
 
+k_value_titles={'year day';'matlab date';'lat';'lon';'k';'r2';'flag';'station'};
 %% organize these points based on position:
 
 %a quick plot of where these points lie:
@@ -124,6 +125,34 @@ xlabel('Longitude')
 ylabel('Latitude')
 %excellent - just the one outlier!
 
+%% hmmm...should double check and take average of mulitple casts on the same day...maybe this helps the relationships?
+
+%average within an event - this way matches to chl...
+%daylist=unique(floor(k_values(:,2)));
+eventlist=unique(k_record(:,5));
+k_avg=[];
+
+for q=1:length(eventlist)%length(daylist)
+    
+    qq=find(cellfun('isempty',strfind(k_record(:,5),eventlist{q}))==0);     
+    k_avg=[k_avg; k_values(qq(1),1:4) mean(k_values(qq,5)) length(qq) qq(1) k_values(qq(1),8)]; 
+
+%     qq=find(k_values(:,2)==daylist(q));
+%     st=unique(k_values(qq,8)); %average within station
+%     for j=1:length(st)
+%         jj=find(k_values(qq,8)==st(j));
+%         k_avg=[k_avg; k_values(qq(jj(1)),1:4) mean(k_values(qq(jj),5)) length(jj) qq(jj(1)) st(j) ];
+%         if length(unique(k_record(qq(jj),5))) > 1 % a discrepancy between station number and event number
+%             disp(st(j))
+%             disp(unique(k_record(qq(jj),5)))
+%         end
+%        
+%     end
+    
+end
+
+
+
 %% now examine k, by yearday, location, etc...
 
 subplot(2,3,2,'replace'), hold on
@@ -149,6 +178,12 @@ for q=1:length(unqdays)
 end
 ii=find(k_values(:,8)==3 | k_values(:,8)==4);
 scatter(k_values(ii,1),-k_values(ii,5),30,k_values(ii,8),'filled')
+
+ii=find(k_avg(:,8)==3 | k_avg(:,8)==4);
+plot(k_avg(ii,1),-k_avg(ii,5),'ko')
+%scatter(k_avg(ii,1),-k_avg(ii,5),30,k_avg(ii,7),'filled')
+
+
 caxis([0 8]), colorbar
 set(gca,'fontsize',14,'box','on')
 ylabel('Attenuation coefficient, K')
@@ -192,12 +227,26 @@ title('Avg total Chl values at tower and node')
 %% RELATIONSHIP? MATCH CHL TO CASTS
 
 %use event number to match...
-chl_match=nan(length(k_record),2);
-for q=1:length(k_record)
+% chl_match=nan(length(k_record),2);
+% for q=1:length(k_record)
+%     
+%     ii=find(cellfun('isempty',regexp(cellstr(event),k_record{q,5}))==0); %match by event number
+%     
+%     if ~isempty(ii)
+%         chl_match(q,1)=k_values(q,2);
+%         chl_match(q,2)=nanmean(chlavg(ii,1)); %for now, just use the average of all the measurements at depth
+%     else
+%         keyboard
+%     end
+% end
+
+chl_match=nan(length(k_avg),2);
+for q=1:length(k_avg)
     
-    ii=find(cellfun('isempty',regexp(cellstr(event),k_record{q,5}))==0);
+    ii=find(cellfun('isempty',regexp(cellstr(event),eventlist{q}))==0); %match by event number
+    
     if ~isempty(ii)
-        chl_match(q,1)=k_values(q,2);
+        chl_match(q,1)=k_avg(q,2);
         chl_match(q,2)=nanmean(chlavg(ii,1)); %for now, just use the average of all the measurements at depth
     else
         keyboard
@@ -208,12 +257,17 @@ end
 %%
 subplot(2,3,5,'replace')
 hold on
-plot(chl_match(:,2),-k_values(:,5),'o','markersize',4,'color',[0.5 0.5 0.5])
+plot(chl_match(:,2),-k_avg(:,5),'o','markersize',4,'color',[0.5 0.5 0.5])
+%scatter(chl_match(:,2),-k_avg(:,5),30,k_avg(:,1),'filled')
 %plot(chl_match(:,3),-cast_record(:,2),'ro')
 ylim([0 0.6])
+%%
 %how about the ones just at the tower?
-jj=find(k_values(:,8)==3 | k_values(:,8)==4);
-plot(chl_match(jj,2),-k_values(jj,5),'.','markersize',14,'color',[0 0.5 1])
+%jj=find(k_avg(:,8)==3 | k_avg(:,8)==4);
+%or the latter half of the year:
+jj=find(k_avg(:,1) > 150);
+scatter(chl_match(jj,2),-k_avg(jj,5),30,k_avg(jj,1),'filled')
+% plot(chl_match(jj,2),-k_avg(jj,5),'.','markersize',14,'color',[0 0.5 1])
 
 set(gca,'box','on','fontsize',14)
 xlabel('Chlorophyll Avg')
@@ -234,16 +288,17 @@ xlim([0 10])
 % fit a power curve through the data:
 %all the data:
 x = chl_match(:,2);
-y = -k_values(:,5);
+y = -k_avg(:,5);
 nn=find(~isnan(x) & ~isnan(y));
 
 [X1,~,~,EXITFLAG] = lsqnonlin(@(theta) fit_powercurve(theta,x(nn),y(nn)),[0.2, 2.2]);
 plot(sort(x),X1(1)*sort(x).^X1(2),'-','color',[0 0 0])
 
 %just the tower and node:
-tn=find(k_values(:,8)==3 | k_values(:,8)==4); %tower or node values
+%tn=find(k_avg(:,8)==3 | k_avg(:,8)==4); %tower or node values
+tn=find(k_avg(:,1) > 150);
 x = chl_match(tn,2);
-y = -k_values(tn,5);
+y = -k_avg(tn,5);
 nn=find(~isnan(x) & ~isnan(y));
 [X2,~,~,EXITFLAG] = lsqnonlin(@(theta) fit_powercurve(theta,x(nn),y(nn)),[0.2, 2.2]);
 plot(sort(x),X2(1)*sort(x).^X2(2),'-','color',[0 0.5 1])
@@ -259,15 +314,15 @@ text(0.2,0.39,'Morel 1988: 0.121x^{0.428}','color',[0.4 0.4 0.4])
 
 %% what about a linear form??
 
-tn=find(k_values(:,8)==3 | k_values(:,8)==4); %tower or node values
+tn=find(k_avg(:,8)==3 | k_avg(:,8)==4); %tower or node values
 x = chl_match(tn,2);
-y = -k_values(tn,5);
+y = -k_avg(tn,5);
 nn=find(~isnan(x) & ~isnan(y));
 [b,~,~,~,stats] = regress(y(nn),[ones(length(nn),1) x(nn)]);
 
 %%
 x = chl_match(:,2);
-y = -k_values(:,5);
+y = -k_avg(:,5);
 nn=find(~isnan(x) & ~isnan(y));
 [b,~,~,~,stats] = regress(sqrt(y(nn)),[ones(length(nn),1) x(nn)]);
 
@@ -279,16 +334,16 @@ addpath /Users/kristenhunter-cevera/Documents/MATLAB/mvco_tools/
 [time_chl, daily_chl, chl_years] = timeseries2ydmat(matdate, chlavg(:,1));
 [chl_wk_avg, chl_wk_std, yd_wk, chl_mn_avg, chl_mn_std, yd_mn] = dy2wkmn_climatology(daily_chl, chl_years);
 
-[~,is]=sort(k_values(:,2));
-[time_k, daily_k, k_years] = timeseries2ydmat(k_values(is,2), -k_values(is,5));
+[~,is]=sort(k_avg(:,2));
+[time_k, daily_k, k_years] = timeseries2ydmat(k_avg(is,2), -k_avg(is,5));
 [k_wk_avg, k_wk_std, k_yd_wk, k_mn_avg, k_mn_std, k_yd_mn] = dy2wkmn_climatology(daily_k, k_years);
 
 itn=union(chl_tower,chl_node); %indexes into chl for tower and node:
 [time_chltn, daily_chltn, chltn_years] = timeseries2ydmat(matdate(itn), chlavg(itn,1));
 [chltn_wk_avg, chltn_wk_std, yd_wk, chltn_mn_avg, chltn_mn_std, yd_mn] = dy2wkmn_climatology(daily_chltn, chltn_years);
 
-[~,is]=sort(k_values(tn,2));
-[time_ktn, daily_ktn, ktn_years] = timeseries2ydmat(k_values(tn(is),2), -k_values(tn(is),5));
+[~,is]=sort(k_avg(tn,2));
+[time_ktn, daily_ktn, ktn_years] = timeseries2ydmat(k_avg(tn(is),2), -k_avg(tn(is),5));
 [ktn_wk_avg, ktn_wk_std, ktn_yd_wk, ktn_mn_avg, ktn_mn_std, ktn_yd_mn] = dy2wkmn_climatology(daily_ktn, ktn_years);
 
 %%
@@ -310,6 +365,14 @@ h4=plot(ax(2),ktn_yd_wk,ktn_wk_avg,'o','markersize',8,'color',[0 0.3 0]);
 
 legend([h1(1); h2(1); h3(1); h4(1)],'all chl','all k','tower/node chl','tower/node k')
 title('Weekly averages')
+
+%% hmmm...may need to look at monthly averages...
+
+
+[chl_month, time_chl_mn] = ydmat2monthlymat(daily_chl, chl_years);
+[k_month, time_k_mn] = ydmat2monthlymat(daily_k, k_years);
+
+
 
 %% save that figure!
 

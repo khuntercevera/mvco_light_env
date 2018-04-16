@@ -289,11 +289,40 @@ plot(yrdy(ms),four(ms),'.','markersize',12,'color',[0.5 0.5 0.5])
 line(xlim,[4 4],'linestyle','--','color',[1 0.3 0])
 line(xlim,[12 12],'linestyle','--','color',[0.5 0.5 0.5])
 
+
 %% okay, and now the density & temp differences at 4m and 12m:
 
 i4=find(downcast_bins(:,1)==4);
 i12=find(downcast_bins(:,1)==12);
 
+%% slightly different versions:
+
+mixedD=downcast_pdens(i12,mvco_ind([mm1;mm2]))-downcast_pdens(i4,mvco_ind([mm1;mm2]));
+stratD=downcast_pdens(i12,mvco_ind(ms))-downcast_pdens(i4,mvco_ind(ms));
+surfaceD=downcast_pdens(i12,mvco_ind(ss))-downcast_pdens(i4,mvco_ind(ss));
+
+clf, hold on
+plot(yrdy([mm1;mm2]),mixedD,'b.','markersize',14)
+plot(yrdy(ss),surfaceD,'.','color',[0 0.8 1],'markersize',14)
+plot(yrdy(ms),stratD,'.','color',[0.5 0.5 0.5],'markersize',14)
+
+
+xlim([1 366])
+yd_ticklabels={'Feb'; 'Apr' ;'Jun' ;'Aug'; 'Oct'; 'Dec'};
+yd_ticks=find_yearday(cell2mat([yd_ticklabels cellstr(repmat('-1-2003',6,1))]));
+set(gca,'box','on','xtick',yd_ticks,'xticklabel',yd_ticklabels,'fontsize',18)
+ylabel('\sigma(4 m) - \sigma(12 m)  (kg/m^{3})')
+line(xlim, [0.2 0.2],'color',[0.5 0.5 0.5],'linestyle','--')
+
+hleg=legend('Mixed','Surface stratification','Below surface stratification');
+set(hleg,'location','northwest','box','off')
+
+%% export for paper:
+addpath /Users/kristenhunter-cevera/Documents/MATLAB/matlab_tools/export_fig_2016/
+set(gcf,'color','w')
+export_fig /Users/kristenhunter-cevera/seasons_of_syn_paper/tex_files/figures/density.pdf
+
+%% in histogram form:
 figure
 subplot(2,3,1,'replace')
 hist(downcast_pdens(i12,mvco_ind([mm1;mm2]))-downcast_pdens(i4,mvco_ind([mm1;mm2])));

@@ -234,7 +234,7 @@ for filenum=1:numfiles
                     text(0.80*diff(xl)+xl(1),0.95*diff(yl)+yl(1),{['K: ' num2str(K(2))];['R2: ' num2str(STATS(1))] })
                     plot(log(edl_PAR),depth(edl_ind),'.'), hold on
                     plot(log(edl_PAR(iparB)),depth(imprB),'.')
-            
+                    
                     K_PAR(filenum).file=filename;
                     K_PAR(filenum).stats=STATS;
                     K_PAR(filenum).K=K;
@@ -254,7 +254,7 @@ for filenum=1:numfiles
                     datetick(ax(2))
                     datetick(ax(1))
                     
-                    plot(ax(1),tempdata(filenum).mprtime(imprB),depth(imprB),'.','markersize',12)                    
+                    plot(ax(1),tempdata(filenum).mprtime(imprB),depth(imprB),'.','markersize',12)
                     plot(ax(2),tempdata(filenum).mprtime(imprB),edl_PAR(iparB),'.','markersize',12)
                     %if need to exclude a cast:
                     % casts=find(diff(impr)>100);
@@ -318,11 +318,13 @@ load(fullfile(sourcepath,'good_data_folders.mat'))
 
 clearvars K_PAR tempdata
 
-foldernum=good_data(14);
+foldernum=good_data(15);
 load(fullfile(processed_path,datafolders{foldernum},['/mat_outfiles/data_' datafolders{foldernum} '.mat']))
 eval(['tempdata=data_' datafolders{foldernum} ';'])
 load(fullfile(processed_path,datafolders{foldernum},['/mat_outfiles/K_PAR_' datafolders{foldernum}]));
 eval(['K_PAR=K_PAR_' datafolders{foldernum} ';'])
+load(fullfile(processed_path,datafolders{foldernum},['/mat_outfiles/location_' datafolders{foldernum}]));
+eval(['location=location_' datafolders{foldernum} ';'])
 
 set(gcf,'position',[33         468        1218         510])
 
@@ -330,7 +332,7 @@ set(gcf,'position',[33         468        1218         510])
 for filenum=1:length(K_PAR);
     
     if K_PAR(filenum).flag==0;
-        
+             
         filename=tempdata(filenum).file;
         depth=tempdata(filenum).depth;
         edl_ind=tempdata(filenum).edl_ind;
@@ -340,6 +342,26 @@ for filenum=1:length(K_PAR);
         ipar=K_PAR(filenum).par_index;
         STATS=K_PAR(filenum).stats;
         
+                %an overview plot:
+        figure(21), clf            
+        hold on
+        %plot station points:
+        plot(-70.567,41.325,'o','markersize',16,'color',[0.5 0.5 0.5]) %tower
+        plot(-70.555,41.335,'o','markersize',16,'color',[0.5 0.5 0.5]) %node
+        plot(-70.6275,41.325,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+        plot(-70.505,41.325,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+        plot(-70.45,41.3275,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+        plot(-70.567,41.255,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+        plot(-70.567,41.2,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+        plot(-70.567,41.145,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+        
+        %and the lat lon:
+        pos=[cell2mat({location(:).lon}') cell2mat({location(:).lat}')];
+        plot(pos(:,1),pos(:,2),'rp')       
+        plot(location(filenum).lon,location(filenum).lat,'bp')
+        disp(location(filenum).notes)
+        
+        figure(1)
         subplot(1,2,1,'replac e')
         [ax h1 h2]=plotyy(tempdata(filenum).mprtime,depth,tempdata(filenum).mprtime(edl_ind),edl_PAR);
         hold(ax(1)); hold(ax(2));
@@ -382,6 +404,25 @@ for filenum=1:length(K_PAR);
         impr2=K_PAR(filenum).depth_index2;
         ipar2=K_PAR(filenum).par_index2;
         
+             figure(21), clf            
+        hold on
+        %plot station points:
+        plot(-70.567,41.325,'o','markersize',16,'color',[0.5 0.5 0.5]) %tower
+        plot(-70.555,41.335,'o','markersize',16,'color',[0.5 0.5 0.5]) %node
+        plot(-70.6275,41.325,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+        plot(-70.505,41.325,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+        plot(-70.45,41.3275,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+        plot(-70.567,41.255,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+        plot(-70.567,41.2,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+        plot(-70.567,41.145,'o','markersize',16,'color',[0.5 0.5 0.5]) %station
+        
+        %and the lat lon:
+        pos=[cell2mat({location(:).lon}') cell2mat({location(:).lat}')];
+        plot(pos(:,1),pos(:,2),'rp')       
+        plot(location(filenum).lon,location(filenum).lat,'bp')
+        disp(location(filenum).notes)
+        
+        figure(1)
         subplot(1,2,1,'replace')
         [ax h1 h2]=plotyy(tempdata(filenum).mprtime,depth,tempdata(filenum).mprtime(edl_ind),edl_PAR);
         hold(ax(1)); hold(ax(2));
