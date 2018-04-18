@@ -2,7 +2,7 @@
 
 % MAKE SURE CONNECTED TO SOSIKNAS FIRST!!!
 
-addpath /Users/kristenhunter-cevera/Documents/MATLAB/mvco_tools
+addpath /Users/kristenhunter-cevera/mvco_tools
 addpath /Volumes/Lab_data/MVCO/FCB/Syn_divrate_model/
 
 %% Synechococcus cell abundance, fluorescence and size:
@@ -18,6 +18,7 @@ allsynCHL=[];
 allsynCHLmode=[];
 allsynvol=[];
 allsynvolmode=[];
+
 
 for yearlabel=2003:2016
     
@@ -37,47 +38,171 @@ for yearlabel=2003:2016
     end
     
     eval(['load /Volumes/Lab_data/MVCO/FCB/MVCO_' filelabel num2str(yearlabel) '/data/processed/grouped/groupsum.mat'])
-    
+    %we won't use beadmatchall just yet as this seems to have some bad
+    %datapoints still in it:
+    eval(['load /Volumes/Lab_data/MVCO/FCB/MVCO_' filelabel num2str(yearlabel) '/data/processed/beads/beadresults.mat'])
+    [ss is]=sort(beadresults(:,1)); %sometimes data points are out of order...
+    beadresults=beadresults(is,:);
     %eval(['matdate_' num2str(yearlabel) '=cellresultsall(:,1);'])
     %eval(['synconc_' num2str(yearlabel) '=cellNUMall(:,1)./cellresultsall(:,3);'])
+    
+    cellresultsall=cellresultsall(~isnan(cellresultsall(:,1)),:);
     to_use=exclude_data(cellresultsall,yearlabel);
     
-%     clf,
-%     subplot(1,2,1,'replace')
-%     plot(cellresultsall(:,1),cellNUMall(:,1)./cellresultsall(:,3),'r.-')
-%     hold on
-%     plot(cellresultsall(to_use,1),cellNUMall(to_use,1)./cellresultsall(to_use,3),'.-','color',[0.2081    0.1663    0.5292])
-%     title(num2str(yearlabel))
-%     subplot(1,2,2,'replace')
-%     plot(cellresultsall(:,1),cellNUMall(:,1)./cellresultsall(:,3),'r.-')
-%     hold on
-%     plot(cellresultsall(to_use,1),cellNUMall(to_use,1)./cellresultsall(to_use,3),'.-','color',[0.2081    0.1663    0.5292])
-%     title(num2str(yearlabel)), set(gca,'yscale','log')
-%     pause
+    %     clf,
+    %     subplot(1,2,1,'replace')
+    %     plot(cellresultsall(:,1),cellNUMall(:,1)./cellresultsall(:,3),'r.-')
+    %     hold on
+    %     plot(cellresultsall(to_use,1),cellNUMall(to_use,1)./cellresultsall(to_use,3),'.-','color',[0.2081    0.1663    0.5292])
+    %     title(num2str(yearlabel))
+    %     subplot(1,2,2,'replace')
+    %     plot(cellresultsall(:,1),cellNUMall(:,1)./cellresultsall(:,3),'r.-')
+    %     hold on
+    %     plot(cellresultsall(to_use,1),cellNUMall(to_use,1)./cellresultsall(to_use,3),'.-','color',[0.2081    0.1663    0.5292])
+    %     title(num2str(yearlabel)), set(gca,'yscale','log')
+    %     pause
+    
+    %known bead outliers:
+    switch yearlabel
+        case 2003
+            ind=find(beadresults(:,13) < 0.9e4); %outlier
+            beadresults(ind,13)=NaN;
+        case 2009
+            ind=find(beadresults(:,13) > 4.05e4); %outlier
+            beadresults(ind,13)=NaN;
+        case 2010
+            ind=find(beadresults(:,10) > 2e4); %PE outlier
+            beadresults(ind,10)=NaN;
+        case 2011
+            ind=find(beadresults(:,13) > 7e4); %outlier
+            beadresults(ind,13)=NaN;
+        case 2013
+            ind=find(beadresults(:,13) > 10e4); %outlier
+            beadresults(ind,13)=NaN;
+            ind=find(beadresults(:,10) > 1.8e4) %PE outlier
+            beadresults(ind,10)=NaN;
+    end
+    
+    %smooth bead mean ?
+    sm_bead_avgSSC=mvco_running_average(beadresults(:,1),beadresults(:,13),3,1); %running average smoothing function that takes into account breaks in FCB deployments
+    sm_bead_avgPE=mvco_running_average(beadresults(:,1),beadresults(:,10),3,1); %running average smoothing function that takes into account breaks in FCB deployments
+     
+    %make a 'beadmatch' equivalent: we will use the bead SSC mean...and
+    %make sure that for a given day, the same value is used...
+% INTERPOLATED BEAD VALUES:
+
+    beadmatch=mvco_interpolation(beadresults(:,1),sm_bead_avgSSC,cellresultsall(to_use,1),1); %one day as a gap
+    beadPEmatch=mvco_interpolation(beadresults(:,1),sm_bead_avgPE,cellresultsall(to_use,1),1);
+% SINGLE BEAD VALUE FOR EACH DAY    
+%     bead_days=floor(beadresults(:,1)); %all of the days with bead runs :)
+%     daylist=floor(cellresultsall(to_use,1));
 %     
+%     beadmatch=nan(length(daylist),1);
+%     beadPEmatch=nan(length(daylist),1);
+%     for count = 1:length(daylist)  %list of days
+%         
+%         day=daylist(count);
+%         %find matching bead data for normalization:
+%         beadind=find(bead_days==day);
+%         if ~isempty(beadind) %found beads
+%             if length(beadind)==1
+%                 beadvol=sm_bead_avgSSC(beadind); %use smoothed bead data
+%                 beadPE=sm_bead_avgPE(beadind);
+%             else
+%                 beadvol=mean(sm_bead_avgSSC(beadind)); %if two events were measured, avg over them
+%                 beadPE=mean(sm_bead_avgPE(beadind));
+%             end
+%             
+%         else %missing day in bead data- use bead values close to that day or average around that day:
+%             bi=find(bead_days==day-1);
+%             bii=find(bead_days==day+1);
+%             if isempty(bi) && isempty(bii)
+%                 bi=find(bead_days==day-2);
+%                 bii=find(bead_days==day+2);
+%             end
+%             if ~isempty(bi) && ~isempty(bii)
+%                 beadvol=mean([sm_bead_avgSSC(bi(end)) sm_bead_avgSSC(bii(1))]);
+%                 beadPE=mean([sm_bead_avgPE(bi(end)) sm_bead_avgPE(bii(1))]);
+%             elseif isempty(bi) & ~isempty(bii)
+%                 beadvol=mean(sm_bead_avgSSC(bii(1)));
+%                 beadPE=mean(sm_bead_avgPE(bii(1)));
+%             elseif isempty(bii) & ~isempty(bi)
+%                 beadvol=mean(sm_bead_avgSSC(bi(end)));
+%                 beadPE=mean(sm_bead_avgPE(bi(end)));
+%             end
+%         end
+%     
+%         if isnan(beadvol) | isnan(beadPE)
+%             keyboard
+%         end
+%         
+%         beadmatch(count)=beadvol;
+%         beadPEmatch(count)=beadPE;        
+%     end
+
+    % and plot to check!
+    figure(13)
+    subplot(2,1,1,'replace'), hold on
+    plot(beadresults(:,1),beadresults(:,13),'.--')
+    plot(beadresults(:,1),sm_bead_avgSSC,'o')
+    plot(cellresultsall(to_use),beadmatch,'.')
+    datetick('x','mm/dd')
+    ylabel('Bead mean SSC')
+    legend('bead data','smoothed bead data','matched data')
+    title(num2str(yearlabel))
+    
+    subplot(2,1,2,'replace'), hold on
+    plot(beadresults(:,1),beadresults(:,10),'.--')
+    plot(beadresults(:,1),sm_bead_avgPE,'o')
+    plot(cellresultsall(to_use),beadPEmatch,'.')
+    datetick('x','mm/dd')
+    ylabel('Bead mean PE')
+    legend('bead data','smoothed bead data','matched data')
+    
+    keyboard
+%     %% now pad all time points with appropriate bead match:
+%     for j=1:length(cellresultsall(to_use,1))
+%         day=floor(cellresultsall(to_use(j),1));
+%         jj=find(daylist==day);
+%         beadmatchall(j)=beadvol(jj);       
+%     end
+    
+%turns out, don't need the above piece! as no 'unique' on the daylist :)
+
     allmatdate=[allmatdate; cellresultsall(to_use,1)];
-    allsynconc=[allsynconc; cellNUMall(to_use,1)./cellresultsall(to_use,3)];
+    allsynconc=[allsynconc; cellNUMall(to_use,1)./cellresultsall(to_use,3)]; %syn cell counts
     
-    allsynSSC=[allsynSSC; cellSSCall(to_use,1)./beadmatchall(to_use,5)];
-    allsynvol = [allsynvol; cytosub_SSC2vol(cellSSCall(to_use,1)./beadmatchall(to_use,5))]; 
-    allsynPE=[allsynPE; cellPEall(to_use,1)./beadmatchall(to_use,2)];
-    allsynCHL=[allsynCHL; cellCHLall(to_use,1)./beadmatchall(to_use,4)];
+%     %if using beadmatchall:
+%     allsynSSC=[allsynSSC; cellSSCall(to_use,1)./beadmatchall(to_use,5)];
+%     allsynvol = [allsynvol; cytosub_SSC2vol(cellSSCall(to_use,1)./beadmatchall(to_use,5))];
+%     allsynPE=[allsynPE; cellPEall(to_use,1)./beadmatchall(to_use,2)];
+%     allsynCHL=[allsynCHL; cellCHLall(to_use,1)./beadmatchall(to_use,4)];
     
-    allsynSSCmode=[allsynSSCmode; cellSSCmodeall(to_use,1)./beadmatchall(to_use,5)];
-    allsynvolmode = [allsynvolmode; cytosub_SSC2vol(cellSSCmodeall(to_use,1)./beadmatchall(to_use,5))]; 
-    allsynPEmode=[allsynPEmode; cellPEmodeall(to_use,1)./beadmatchall(to_use,2)];
-    allsynCHLmode=[allsynCHLmode; cellCHLmodeall(to_use,1)./beadmatchall(to_use,4)];
-    %allbeads=[allbeads; beadmatchall(to_use,[2 5])];
+    allsynSSC=[allsynSSC; cellSSCall(to_use,1)./beadmatch];
+    allsynSSCmode=[allsynSSCmode; cellSSCmodeall(to_use,1)./beadmatch];
+
+    allsynvol = [allsynvol; cytosub_SSC2vol(cellSSCall(to_use,1)./beadmatch)];
+    allsynvolmode = [allsynvolmode; cytosub_SSC2vol(cellSSCmodeall(to_use,1)./beadmatch)];
+    
+    allsynPE=[allsynPE; cellPEall(to_use,1)./beadPEmatch];
+    allsynPEmode=[allsynPEmode; cellPEmodeall(to_use,1)./beadPEmatch];
+
+%     allsynCHL=[allsynCHL; cellCHLall(to_use,1)./beadmatchall(to_use,4)];
+%     allsynCHLmode=[allsynCHLmode; cellCHLmodeall(to_use,1)./beadmatchall(to_use,4)];
+
+%allbeads=[allbeads; beadmatchall(to_use,[2 5])];
+    
+    
     
 end
 
 %%
 % remove nan's
 ii=find(~isnan(allmatdate));
-allmatdate=allmatdate(ii); allsynconc=allsynconc(ii);  
+allmatdate=allmatdate(ii); allsynconc=allsynconc(ii);
 
 allsynPE=allsynPE(ii); %allbeads=allbeads(ii,:);
-allsynPEmode=allsynPEmode(ii);  
+allsynPEmode=allsynPEmode(ii);
 allsynCHL=allsynCHL(ii);
 allsynCHLmode=allsynCHLmode(ii);
 allsynSSC=allsynSSC(ii);
@@ -191,12 +316,12 @@ for yearlabel=2003:2016
         to_use=find(~isnan(modelresults(:,1)) & modelresults(:,1)~=0); %just in case ;)
     end
     
-%     clf,
-%     plot(modelresults(:,1),modelresults(:,17),'r.','markersize',20)
-%     hold on
-%     plot(modelresults(to_use,1),modelresults(to_use,17),'.','color',[0.2081    0.1663    0.5292],'markersize',20)
-%     title(num2str(yearlabel))
-%     pause
+    %     clf,
+    %     plot(modelresults(:,1),modelresults(:,17),'r.','markersize',20)
+    %     hold on
+    %     plot(modelresults(to_use,1),modelresults(to_use,17),'.','color',[0.2081    0.1663    0.5292],'markersize',20)
+    %     title(num2str(yearlabel))
+    %     pause
     
     allgrowthrates=[allgrowthrates; modelresults(to_use,17)];
     modelallmatdate=[modelallmatdate; modelresults(to_use,1)];
@@ -356,7 +481,7 @@ netmu_avg(jj,2)=nan;
 [tt, id, im]=intersect(netmu_avg(:,1),allMR(:,1));
 
 %THERE ARE SOME MODEL DAYS THAT DO NOT HAVE A NET GROWTH RATE -
-%LIKEY, THESE ARE DAYS WHERE DAWN HOURS CAN BE MISSING!!! 
+%LIKEY, THESE ARE DAYS WHERE DAWN HOURS CAN BE MISSING!!!
 %BUT NEED TO CHECK THIS!
 
 %INDEED, all days come back as either missing 1-5 of first dawn hours, or
@@ -364,38 +489,38 @@ netmu_avg(jj,2)=nan;
 
 % Pause here for sanity figures!
 % lightblue=[191 	239 	255]./[255 255 255];
-% 
+%
 % figure
 % plot(allmatdate,synrunavg,'k.-')
 % hold on
 % for j=1:length(dawnavg)
 %     plot(allmatdate(dawn_ind{j}),synrunavg(dawn_ind{j}),'r.--','markersize',10)
 % end
-% 
+%
 % temp=netmu_avg(id,:);
 % qq=find(isnan(temp(:,2)));
 % missing_days=temp(qq,1);
-% 
+%
 % for q=1:length(missing_days);
-%     
+%
 %     day=missing_days(q);
 %     w1=find(dawnavg(:,1)==day);
 %     dielst=dawnavg(w1,5);
-%     
+%
 %     w2=find(netmu_avg(:,1)==day);
-%     
+%
 %     %How many hours of data are past dawn?
 %     %  ind=find(allmatdate(:,1) > day+((dielst-2)/24) & allmatdate(:,1) < day+((dielst+3)/24)+1);
 %     %  fprintf('Length of ind: %f\n',length(ind))
-%     
+%
 %     f1=fill([day; day+1; day+1; day]+dielst/24,[0 0 5e5 5e5],lightblue);hold on;
 %     set(f1,'linestyle', 'none'), xlim([day-3 day+3]),  uistack(f1,'bottom')
 %     ylim([0.5*dawnavg(w1+1,2) 1.2*dawnavg(w1+1,2)])
-%     
+%
 %     datetick('x','mm/dd/yy','keeplimits')
 %     disp([num2str(q) ' out of ' num2str(length(missing_days))])
 %     pause
-%     
+%
 % end
 
 %% Older version (pre June2016):
