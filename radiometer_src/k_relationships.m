@@ -80,6 +80,7 @@ end
 %add in yearday:
 k_values=[find_yearday(k_values(:,1)) k_values];
 
+k_record_titles={'date';'folder number';'K_PAR file name';'location file name';'event number';'K_PAR notes';'location notes'};
 k_value_titles={'year day';'matlab date';'lat';'lon';'k';'r2';'flag';'station'};
 %% organize these points based on position:
 
@@ -125,32 +126,42 @@ xlabel('Longitude')
 ylabel('Latitude')
 %excellent - just the one outlier!
 
-%% hmmm...should double check and take average of mulitple casts on the same day...maybe this helps the relationships?
+%% hmmm...should double check and take average of mulitple casts per event number...maybe this helps the relationships?
+%still leaves them separate on the day though...
 
 %average within an event - this way matches to chl...
-%daylist=unique(floor(k_values(:,2)));
 eventlist=unique(k_record(:,5));
-k_avg=[];
+k_avg=[]; %matched by event number...
 
 for q=1:length(eventlist)%length(daylist)
     
-    qq=find(cellfun('isempty',strfind(k_record(:,5),eventlist{q}))==0);     
+    qq=find(cellfun('isempty',strfind(k_record(:,5),eventlist{q}))==0);     %matching by event number
     k_avg=[k_avg; k_values(qq(1),1:4) mean(k_values(qq,5)) length(qq) qq(1) k_values(qq(1),8)]; 
 
-%     qq=find(k_values(:,2)==daylist(q));
-%     st=unique(k_values(qq,8)); %average within station
-%     for j=1:length(st)
-%         jj=find(k_values(qq,8)==st(j));
-%         k_avg=[k_avg; k_values(qq(jj(1)),1:4) mean(k_values(qq(jj),5)) length(jj) qq(jj(1)) st(j) ];
-%         if length(unique(k_record(qq(jj),5))) > 1 % a discrepancy between station number and event number
-%             disp(st(j))
-%             disp(unique(k_record(qq(jj),5)))
-%         end
-%        
-%     end
+end
+
+k_avg_titles={'year day';'matdate';'lat';'lon';'avg k within event';'number of obs';'index into k_values';'station'};
+%%
+daylist=unique(floor(k_values(:,2)));
+k_avg_byday=[]; %matched by day
+
+for q=1:length(daylist)
+    
+    qq=find(k_values(:,2)==daylist(q));
+    st=unique(k_values(qq,8)); %average within station
+    for j=1:length(st)
+        jj=find(k_values(qq,8)==st(j));
+        k_avg_byday=[k_avg_byday; k_values(qq(jj(1)),1:4) mean(k_values(qq(jj),5)) length(jj) qq(jj(1)) st(j) ];
+        if length(unique(k_record(qq(jj),5))) > 1 % a discrepancy between station number and event number
+            disp(st(j))
+            disp(unique(k_record(qq(jj),5)))
+        end
+       
+    end
     
 end
 
+k_avg_byday_titles={'year day';'matdate';'lat';'lon';'avg k over day';'number of obs';'index into k_values';'station'};
 
 
 %% now examine k, by yearday, location, etc...
@@ -176,11 +187,14 @@ unqdays=unique(k_values(:,1));
 for q=1:length(unqdays)
     line([unqdays(q) unqdays(q)],ylim,'color',[0.6 0.6 0.6])
 end
-ii=find(k_values(:,8)==3 | k_values(:,8)==4);
+ii=find(k_values(:,8)==3 | k_values(:,8)==4 | k_values(:,8)==1 | k_values(:,8)==2);
 scatter(k_values(ii,1),-k_values(ii,5),30,k_values(ii,8),'filled')
 
 ii=find(k_avg(:,8)==3 | k_avg(:,8)==4);
 plot(k_avg(ii,1),-k_avg(ii,5),'ko')
+ii=find(k_avg_byday(:,8)==3 | k_avg_byday(:,8)==4);
+plot(k_avg_byday(ii,1),-k_avg_byday(ii,5),'ro')
+
 %scatter(k_avg(ii,1),-k_avg(ii,5),30,k_avg(ii,7),'filled')
 
 
@@ -564,106 +578,3 @@ for q=1:length(dy)
 end
 
 
-%% Interpolate avg k values for each day of year
-
-%for just tower and node now:
-%and the spline through those:
-nn=find(~isnan(ktn_wk_avg));
-%YY = spline(ktn_yd_wk(nn),ktn_wk_avg(nn),1:366);
-
-%wrap year around:
-x=ktn_yd_wk(nn); x=[x(end)-366; x(2:end); x(2)+366];
-y=ktn_wk_avg(nn); y=[y(end); y(2:end); y(2)];
-%for the moment, exclude low first value:
-YY=interp1(x,y,1:366);
-figure, hold on
-
-%light gray vertical lines for each sampling day:
-xlim([1 366]); ylim([0.15 0.5])
-unqdays=unique(k_values(:,1));
-for q=1:length(unqdays)
-    line([unqdays(q) unqdays(q)],ylim,'color',[0.6 0.6 0.6])
-end
-ii=find(k_values(:,8)==3 | k_values(:,8)==4);
-scatter(k_values(ii,1),-k_values(ii,5),30,k_values(ii,8),'filled')
-caxis([0 8]), colorbar
-set(gca,'fontsize',14,'box','on')
-ylabel('Attenuation coefficient, K')
-xlabel('Year Day')
-xlim([1 366])
-title('k for just tower and node locations')
-
-plot(ktn_yd_wk(nn),ktn_wk_avg(nn),'o','markerfacecolor',[0.5 0.5 0.5])
-plot(1:366,YY,'-','color',[0.5 0.5 0.5])
-
-
-
-
-
-
-
-
-%% Link to and comparison with syn stuff!
-
-load('/Users/kristenhunter-cevera/MVCO_light_at_depth/syn_data_analysis/mvco_envdata_15Dec2017.mat')
-load('/Users/kristenhunter-cevera/MVCO_light_at_depth/syn_data_analysis/syndata_04Jan2017.mat')
-
-%%
-figure, plot(1:366, light_avg,'.-'), hold on
-E_d = light_avg.*exp(4*-YY');
-plot(1:366,E_d,'.-')
-xlim([1 366])
-ylabel('Daily average radiation (MJ m{-2})')
-xlabel('Year day')
-set(gca,'fontsize',14)
-%%
-figure
-plot(Tcorr_avg, mu_avg,'o')
-
-%%
-clf
-% subplot(1,2,1,'replace')
-% scatter(light_avg, mu_avg,30,ydmu,'filled')
-% subplot(1,2,2,'replace')
-% scatter(E_d, mu_avg,30,ydmu,'filled')
-
-subplot(1,2,1,'replace')
-scatter(light_avg, mu_avg,30,ydmu,'filled')
-ylabel('Division rate (d^{-1})')
-xlabel('Average radiation (MJ m{-2})')
-caxis([1 366])
-colormap jet
-set(gca,'fontsize',14,'box','on')
-title('Incident')
-
-subplot(1,2,2,'replace')
-scatter(E_d, mu_avg,30,ydmu,'filled')
-xlabel('Average radiation at 4m depth (MJ m{-2})')
-caxis([1 366])
-hbar=colorbar; set(hbar,'Ydir','reverse'); ylabel(hbar,'Year day')
-set(gca,'fontsize',14,'box','on')
-title('At depth')
-%%
-clf
-% subplot(1,2,1,'replace')
-% scatter(light_avg, PE_avg,30,ydmu,'filled')
-% subplot(1,2,2,'replace')
-% scatter(E_d, PE_avg,30,ydmu,'filled')
-
-subplot(1,2,1,'replace')
-scatter(light_avg, PE_avg,30,Tcorr_avg,'filled')
-xlabel('Average radiation (MJ m{-2})')
-ylabel('PE fluorescence')
-colormap jet
-caxis([-2 22])
-set(gca,'fontsize',14,'box','on')
-xlim([0 30])
-
-subplot(1,2,2,'replace')
-scatter(E_d, PE_avg,30,Tcorr_avg,'filled')
-caxis([-2 22])
-xlim([0 10])
-xlabel('Average radiation at 4m depth (MJ m{-2})')
-
-set(gca,'fontsize',14,'box','on')
-hbar=colorbar; ylabel(hbar,'Temperature')

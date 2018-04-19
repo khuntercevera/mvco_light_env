@@ -19,8 +19,8 @@ allsynCHLmode=[];
 allsynvol=[];
 allsynvolmode=[];
 
-
-for yearlabel=2003:2016
+%%
+for yearlabel=2016
     
     switch yearlabel
         case 2003
@@ -80,6 +80,11 @@ for yearlabel=2003:2016
             ind=find(beadresults(:,13) > 10e4); %outlier
             beadresults(ind,13)=NaN;
             ind=find(beadresults(:,10) > 1.8e4) %PE outlier
+            beadresults(ind,10)=NaN;
+        case 2016
+            ind=find(beadresults(:,13) > 8e5); %outlier
+            beadresults(ind,13)=NaN;
+            ind=find(beadresults(:,10) > 4e4) %PE outlier
             beadresults(ind,10)=NaN;
     end
     
@@ -190,10 +195,8 @@ for yearlabel=2003:2016
 %     allsynCHL=[allsynCHL; cellCHLall(to_use,1)./beadmatchall(to_use,4)];
 %     allsynCHLmode=[allsynCHLmode; cellCHLmodeall(to_use,1)./beadmatchall(to_use,4)];
 
-%allbeads=[allbeads; beadmatchall(to_use,[2 5])];
-    
-    
-    
+%     allbeads=[allbeads; beadmatchall(to_use,[2 5])];
+
 end
 
 %%
@@ -203,8 +206,8 @@ allmatdate=allmatdate(ii); allsynconc=allsynconc(ii);
 
 allsynPE=allsynPE(ii); %allbeads=allbeads(ii,:);
 allsynPEmode=allsynPEmode(ii);
-allsynCHL=allsynCHL(ii);
-allsynCHLmode=allsynCHLmode(ii);
+% allsynCHL=allsynCHL(ii);
+% allsynCHLmode=allsynCHLmode(ii);
 allsynSSC=allsynSSC(ii);
 allsynSSCmode=allsynSSCmode(ii);
 allsynvol=allsynvol(ii);
@@ -215,7 +218,7 @@ allsynvolmode=allsynvolmode(ii);
 %treated as separate chunks:
 synrunavg=mvco_running_average(allmatdate, allsynconc,48,1);
 
-clearvars -except synrunavg allmatdate allsynconc allsynSSC* allsynPE* allsynCHL* allsynvol* %allbeads
+clearvars -except synrunavg allmatdate allsynconc allsynSSC* allsynPE* allsynvol* %allbeads *allsynCHL
 
 %% bin syn cell abundance:
 
@@ -226,31 +229,31 @@ syn_avg(end)=NaN; %this is because only one year with a leap year could be inclu
 syn_std=nanstd(daily_syn,0,2);
 
 [time_PE, daily_PE] = timeseries2ydmat(allmatdate, allsynPE); %Syn PE fluorescence
-[time_CHL, daily_CHL] = timeseries2ydmat(allmatdate, allsynCHL); %Syn CHL fluorescence
+%[time_CHL, daily_CHL] = timeseries2ydmat(allmatdate, allsynCHL); %Syn CHL fluorescence
 [time_SSC, daily_SSC] = timeseries2ydmat(allmatdate, allsynSSC); %SSC, bead normalized
 [time_vol, daily_vol] = timeseries2ydmat(allmatdate, allsynvol); %Cell volume from SSC-bead normalized
 
 PE_avg=nanmean(daily_PE,2);
-CHL_avg=nanmean(daily_CHL,2);
+%CHL_avg=nanmean(daily_CHL,2);
 SSC_avg=nanmean(daily_SSC,2);
 vol_avg=nanmean(daily_vol,2);
 [PE_avg_wk, PE_std_wk] = dy2wkmn_climatology(daily_PE, synyears);
-[CHL_avg_wk, CHL_std_wk] = dy2wkmn_climatology(daily_CHL, synyears);
+%[CHL_avg_wk, CHL_std_wk] = dy2wkmn_climatology(daily_CHL, synyears);
 [SSC_avg_wk, SSC_std_wk] = dy2wkmn_climatology(daily_SSC, synyears);
 [vol_avg_wk, vol_std_wk] = dy2wkmn_climatology(daily_vol, synyears);
 
 %for the modes:
 [time_PEmode, daily_PEmode] = timeseries2ydmat(allmatdate, allsynPEmode); %Syn PE fluorescence
-[time_CHLmode, daily_CHLmode] = timeseries2ydmat(allmatdate, allsynCHLmode); %Syn CHL fluorescence
+%[time_CHLmode, daily_CHLmode] = timeseries2ydmat(allmatdate, allsynCHLmode); %Syn CHL fluorescence
 [time_SSCmode, daily_SSCmode] = timeseries2ydmat(allmatdate, allsynSSCmode); %smoothed abundance
 [time_volmode, daily_volmode] = timeseries2ydmat(allmatdate, allsynvolmode); %smoothed abundance
 
 PE_mode_avg=nanmean(daily_PEmode,2);
-CHL_mode_avg=nanmean(daily_CHLmode,2);
+%CHL_mode_avg=nanmean(daily_CHLmode,2);
 SSC_mode_avg=nanmean(daily_SSCmode,2);
 vol_mode_avg=nanmean(daily_volmode,2);
 [PE_mode_avg_wk, PE_mode_std_wk] = dy2wkmn_climatology(daily_PEmode, synyears);
-[CHL_mode_avg_wk, CHL_mode_std_wk] = dy2wkmn_climatology(daily_CHLmode, synyears);
+%[CHL_mode_avg_wk, CHL_mode_std_wk] = dy2wkmn_climatology(daily_CHLmode, synyears);
 [SSC_mode_avg_wk, SSC_mode_std_wk] = dy2wkmn_climatology(daily_SSCmode, synyears);
 [vol_mode_avg_wk, vol_mode_std_wk] = dy2wkmn_climatology(daily_volmode, synyears);
 
