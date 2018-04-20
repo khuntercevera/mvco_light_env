@@ -29,7 +29,9 @@ ylabel('Latitude')
 %acutally, average casts that were less than 10 yeardays apart:
 unq_yrdy=unique(k_avg(:,1));
 kaggregate=nan(8,4);
+kaggregate_hilow=nan(8,4);
 count=0;
+
 for q=1:length(unq_yrdy)
     
     if ismember(unq_yrdy(q),[66 72 73 82 255 267])
@@ -38,15 +40,22 @@ for q=1:length(unq_yrdy)
                 count=count+1;
                 qq=find(k_avg(:,1) >= 66 & k_avg(:,1) <= 82 & k_avg(:,8)~=8 & k_avg(:,8)~=7 & k_avg(:,8)~=0 & k_avg(:,8)~=1); %exclude outer shelf casts
                 kaggregate(count,1)=mean([66 72 73 82]);
+                kaggregate_hilow(count,1)=mean([66 72 73 82]);
             case 267 %255 only has casts at 7 and 8...
                 count=count+1;
                 qq=find(k_avg(:,1) >= 255 & k_avg(:,1) <= 267 & k_avg(:,8)~=8 & k_avg(:,8)~=7 & k_avg(:,8)~=0 & k_avg(:,8)~=1); %exclude outer shelf casts
                 kaggregate(count,1)=267;
+                kaggregate_hilow(count,1)=267;
         end
         
         kaggregate(count,2)=nanmean(k_avg(qq,5));
         kaggregate(count,3)=nanstd(k_avg(qq,5));
         kaggregate(count,4)=length(qq); 
+        
+        kaggregate_hilow(count,2)=min(k_low(qq,5));
+        kaggregate_hilow(count,3)=max(k_high(qq,5));
+        kaggregate_hilow(count,4)=length(qq); 
+        
     else
     count=count+1;    
     qq=find(k_avg(:,1)==unq_yrdy(q) & k_avg(:,8)~=8 & k_avg(:,8)~=7 & k_avg(:,8)~=0 & k_avg(:,8)~=1); %exclude outer shelf casts
@@ -54,6 +63,11 @@ for q=1:length(unq_yrdy)
     kaggregate(count,2)=nanmean(k_avg(qq,5));
     kaggregate(count,3)=nanstd(k_avg(qq,5));
     kaggregate(count,4)=length(qq); 
+    
+    kaggregate_hilow(count,1)=unq_yrdy(q);
+    kaggregate_hilow(count,2)=min(k_low(qq,5));
+    kaggregate_hilow(count,3)=max(k_high(qq,5));
+    kaggregate_hilow(count,4)=length(qq); 
     
     end
 
@@ -79,12 +93,38 @@ end
 
 subplot(1,2,2,'replace'), hold on
 
-% tt=find(k_values(:,8)~=7 & k_values(:,8)~=8 & k_values(:,8)~=0 & k_values(:,8)~=1);
-% scatter(k_values(tt,1),-k_values(tt,5),30,k_values(tt,8),'filled')
-tt=find(k_avg(:,8)~=7 & k_avg(:,8)~=8 & k_avg(:,8)~=0 & k_avg(:,8)~=1);
-scatter(k_avg(tt,1),-k_avg(tt,5),30,k_values(tt,8),'filled')
+
+% tt=find(k_avg(:,8)~=7 & k_avg(:,8)~=8 & k_avg(:,8)~=0 & k_avg(:,8)~=1);
+% scatter(k_avg(tt,1),-k_avg(tt,5),30,k_values(tt,8),'filled')
+
+%plot the averages: with connections:
+%calc slope...
+% m1=kaggregate(end,2);
+% m2=kaggregate(1,2);
+% m=(m2-m1)/(365-347 + 16); 
+% x=[1; kaggregate(:,1); 365];
+% y=[-(m*(366-347)+m1); -kaggregate(:,2); -(m*(365-347)+m1)];
+
+%or just pad:
+x=[kaggregate(end,1)-365; kaggregate(:,1); kaggregate(1,1)+365];
+y=[-kaggregate(end,2); -kaggregate(:,2); -kaggregate(1,2)];
+plot(x, y,':','color',[0.3 0.3 0.3],'linewidth',2)
+
+x=[kaggregate_hilow(end,1)-365; kaggregate_hilow(:,1); kaggregate_hilow(1,1)+365];
+y=[-kaggregate_hilow(end,2); -kaggregate_hilow(:,2); -kaggregate_hilow(1,2)];
+plot(x, y,':','color',[0.6 0.6 0.6],'linewidth',2)
+
+x=[kaggregate_hilow(end,1)-365; kaggregate_hilow(:,1); kaggregate_hilow(1,1)+365];
+y=[-kaggregate_hilow(end,3); -kaggregate_hilow(:,3); -kaggregate_hilow(1,3)];
+plot(x, y,':','color',[0.6 0.6 0.6],'linewidth',2)
+
+%plot(kaggregate(:,1), -kaggregate(:,2),'.','markersize',12,'color',[0.5 0.5 0.5])
+
+tt=find(k_values(:,8)~=7 & k_values(:,8)~=8 & k_values(:,8)~=0 & k_values(:,8)~=1);
+scatter(k_values(tt,1),-k_values(tt,5),30,k_values(tt,8),'filled')
 
 colorbar
+caxis([1 8])
 set(gca,'fontsize',14,'box','on')
 ylabel('Attenuation coefficient, K')
 xlabel('Year Day')
@@ -92,57 +132,21 @@ xlim([1 366])
 title('k for all stations')
 
 colormap jet
-
-%plot the averages: with connections
-m1=kaggregate(end,2);
-m2=kaggregate(1,2);
-m=(m2-m1)/(365-347 + 16); 
-x=[1; kaggregate(:,1); 365];
-y=[-(m*(366-347)+m1); -kaggregate(:,2); -(m*(365-347)+m1)];
-plot(x, y,':','color',[0.5 0.5 0.5],'linewidth',2)
-
-plot(kaggregate(:,1), -kaggregate(:,2),'.','markersize',12,'color',[0.5 0.5 0.5])
-
-% x=[kaggregate(:,1); kaggregate(end:-1:1,1)];
-% y=[-(kaggregate(:,2)-kaggregate(:,3)); -(kaggregate(end:-1:1,2)+kaggregate(end:-1:1,3))];
-% fill(x, y,[0.5 0.5 0.5])
 %% Interpolate avg k values for each day of year
 
-%for just tower and node now:
-%and the spline through those:
-nn=find(~isnan(ktn_wk_avg));
-%YY = spline(ktn_yd_wk(nn),ktn_wk_avg(nn),1:366);
-
+%not for stations 7 and 8:
 %wrap year around:
-x=ktn_yd_wk(nn); x=[x(end)-366; x(2:end); x(2)+366];
-y=ktn_wk_avg(nn); y=[y(end); y(2:end); y(2)];
-%for the moment, exclude low first value:
+x=[kaggregate(end,1)-365; kaggregate(:,1); kaggregate(1,1)+365];
+y=[-kaggregate(end,2); -kaggregate(:,2); -kaggregate(1,2)];
 YY=interp1(x,y,1:366);
-figure, hold on
 
-%light gray vertical lines for each sampling day:
-xlim([1 366]); ylim([0.15 0.5])
-unqdays=unique(k_values(:,1));
-for q=1:length(unqdays)
-    line([unqdays(q) unqdays(q)],ylim,'color',[0.6 0.6 0.6])
-end
-ii=find(k_values(:,8)==3 | k_values(:,8)==4);
-scatter(k_values(ii,1),-k_values(ii,5),30,k_values(ii,8),'filled')
-caxis([0 8]), colorbar
-set(gca,'fontsize',14,'box','on')
-ylabel('Attenuation coefficient, K')
-xlabel('Year Day')
-xlim([1 366])
-title('k for just tower and node locations')
+x=[kaggregate_hilow(end,1)-365; kaggregate_hilow(:,1); kaggregate_hilow(1,1)+365];
+y=[-kaggregate_hilow(end,2); -kaggregate_hilow(:,2); -kaggregate_hilow(1,2)];
+YY_low=interp1(x,y,1:366);
 
-plot(ktn_yd_wk(nn),ktn_wk_avg(nn),'o','markerfacecolor',[0.5 0.5 0.5])
-plot(1:366,YY,'-','color',[0.5 0.5 0.5])
-
-
-
-
-
-
+x=[kaggregate_hilow(end,1)-365; kaggregate_hilow(:,1); kaggregate_hilow(1,1)+365];
+y=[-kaggregate_hilow(end,3); -kaggregate_hilow(:,3); -kaggregate_hilow(1,3)];
+YY_high=interp1(x,y,1:366);
 
 
 %% Link to and comparison with syn stuff!
@@ -152,8 +156,16 @@ load('/Users/kristenhunter-cevera/MVCO_light_at_depth/syn_data_analysis/syndata_
 
 %%
 figure, plot(1:366, light_avg,'.-'), hold on
-E_d = light_avg.*exp(4*-YY');
+E_d = light_avg.*exp(4*-YY');  %DOUBLE CHECK THAT THIS IS INDEED THE RIGHT WAY TO CALCULATE THIS!!!
 plot(1:366,E_d,'.-')
+
+E_d = light_avg.*exp(4*-YY_low');  %DOUBLE CHECK THAT THIS IS INDEED THE RIGHT WAY TO CALCULATE THIS!!!
+plot(1:366,E_d,'.-')
+
+E_d = light_avg.*exp(4*-YY_high');  %DOUBLE CHECK THAT THIS IS INDEED THE RIGHT WAY TO CALCULATE THIS!!!
+plot(1:366,E_d,'.-')
+
+
 xlim([1 366])
 ylabel('Daily average radiation (MJ m{-2})')
 xlabel('Year day')

@@ -132,11 +132,15 @@ ylabel('Latitude')
 %average within an event - this way matches to chl...
 eventlist=unique(k_record(:,5));
 k_avg=[]; %matched by event number...
+k_low=[]; %lowest k recorded for event...
+k_high=[]; %highest k_recorded for event...
 
 for q=1:length(eventlist)%length(daylist)
     
     qq=find(cellfun('isempty',strfind(k_record(:,5),eventlist{q}))==0);     %matching by event number
     k_avg=[k_avg; k_values(qq(1),1:4) mean(k_values(qq,5)) length(qq) qq(1) k_values(qq(1),8)]; 
+     k_low=[k_low; k_values(qq(1),1:4) min(k_values(qq,5)) length(qq) qq(1) k_values(qq(1),8)]; 
+      k_high=[k_high; k_values(qq(1),1:4) max(k_values(qq,5)) length(qq) qq(1) k_values(qq(1),8)]; 
 
 end
 
