@@ -221,3 +221,8 @@ xlabel('Average radiation at 4m depth (MJ m{-2})')
 
 set(gca,'fontsize',14,'box','on')
 hbar=colorbar; ylabel(hbar,'Temperature')
+
+
+%% size seemed to show relationship with light rather than division rate...
+%thought about showing size with division rate...but light seems to be
+%better!
