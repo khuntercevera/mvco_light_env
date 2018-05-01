@@ -226,3 +226,7 @@ hbar=colorbar; ylabel(hbar,'Temperature')
 %% size seemed to show relationship with light rather than division rate...
 %thought about showing size with division rate...but light seems to be
 %better!
+
+figure, scatter(E_d,SSC_avg,30,ydmu,'filled')
+colormap jet
+figure, scatter(mu_avg,SSC_avg,30,ydmu,'filled')
