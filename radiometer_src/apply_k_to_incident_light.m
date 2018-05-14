@@ -1,6 +1,10 @@
 %load in pre-processed k info:
 
-load /Users/kristenhunter-cevera/MVCO_light_at_depth/radiometer_src/k_lite.mat
+s=pwd;
+folders=strsplit(s,'/');
+path2files=strjoin(folders(1:4),'/');
+filename=fullfile(path2files,'/MVCO_light_at_depth/radiometer_src/k_lite.mat');
+eval(['load ' filename])
 
 
 %% 
@@ -227,6 +231,24 @@ hbar=colorbar; ylabel(hbar,'Temperature')
 %thought about showing size with division rate...but light seems to be
 %better!
 
-figure, scatter(E_d,SSC_avg,30,ydmu,'filled')
-colormap jet
-figure, scatter(mu_avg,SSC_avg,30,ydmu,'filled')
+clf
+subplot(1,4,1,'replace')
+scatter(E_d,SSC_avg,30,Tcorr_avg,'filled')
+% colormap(seas)
+xlabel('Light at depth')
+ylabel('Cell volume')
+
+subplot(1,4,2,'replace')
+scatter(E_d,PE_avg,30,Tcorr_avg,'filled')
+xlabel('Light at depth')
+ylabel('Cell PE')
+
+subplot(1,4,3,'replace')
+scatter(SSC_avg,PE_avg,30,Tcorr_avg,'filled')
+xlabel('Cell Size')
+ylabel('PE fluorescence')
+
+subplot(1,4,4,'replace')
+scatter(mu_avg,SSC_avg,30,Tcorr_avg,'filled')
+ylabel('Cell Size')
+xlabel('mu')
