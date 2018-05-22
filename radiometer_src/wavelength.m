@@ -272,9 +272,14 @@ view([-24 42.8]) %for subplot1
 
 %% Or even better a heatmap!
 
-
-%let's only use tower or node casts...
+ addpath /Users/kristenhunter-cevera/MVCO_V6V8/MVCO_Syn_V6V8_analysis/sequence_analysis/compositional_stats_analysis/
+ %what is the best way to normalize spectra?
+ 
+%let's only use tower casts for now...
 %and spectra at 4 m ....
+
+% find the tower casts:
+tn=find(wv_record(:,13)==4);
 
 unqdaylist=unique(wv_record(tn,2));
 
@@ -286,7 +291,7 @@ y=[];
 for q=1:size(unqdaylist,1)
   
     qq=find(wv_record(tn,2)==unqdaylist(q));
-    disp([num2str(length(qq)) ' tower/node casts: ' datestr(unqdaylist(q))])
+    disp([num2str(length(qq)) ' tower casts: ' datestr(unqdaylist(q))])
     %spectra at 4m:
 %     if wv_record(tn(is(q)),2) ~= tempday
 %         rel_sp=[rel_sp NaN(length(wv),3)];
@@ -312,14 +317,17 @@ for q=1:size(unqdaylist,1)
     subplot(1,3,1,'replace')
     plot(wv, temp4,'.-','color',[0.5 0.5 0.5]), hold on
     plot(wv,norm_spectra4,'b.-')
-        
+    title('Spectra at 4m')
+    
     subplot(1,3,2,'replace')
+    title('Spectra at 8m')
     if ~isempty(all_spectra8)
     plot(wv, temp8,'.-','color',[0.5 0.5 0.5]), hold on
     plot(wv,norm_spectra8,'b.-')
     end
     
     subplot(1,3,3,'replace')
+    title('Spectra at 12m')
     if ~isempty(all_spectra12)
     plot(wv, temp12,'.-','color',[0.5 0.5 0.5]), hold on
     plot(wv,norm_spectra12,'b.-')
@@ -336,6 +344,22 @@ for q=1:size(unqdaylist,1)
     
 end
 
+%%
+save wv-lite wv* rel*
+
+%% line figures?
+
+cc=jet(366);
+figure, hold on
+for j=1:14
+plot(wv, rel_sp4(:,j),'-','color',cc(find_yearday(unqdaylist(j)),:),'linewidth',3)
+end
+
+xlim([350 750])
+ylim([0 0.025])
+
+colormap jet
+colorbar
 %%
 
 [~,is]=sort(find_yearday(y));
