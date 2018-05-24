@@ -6,6 +6,8 @@ path2files=strjoin(folders(1:4),'/');
 filename=fullfile(path2files,'/MVCO_light_at_depth/radiometer_src/k_lite.mat');
 eval(['load ' filename])
 
+%%
+load '/Users/kristenhunter-cevera/MVCO_light_at_depth/radiometer_src/k_lite.mat'
 
 %% Interpolate avg k values for each day of year
 
@@ -13,15 +15,15 @@ eval(['load ' filename])
 %wrap year around:
 x=[kaggregate(end,1)-365; kaggregate(:,1); kaggregate(1,1)+365];
 y=[-kaggregate(end,2); -kaggregate(:,2); -kaggregate(1,2)];
-YY=interp1(x,y,1:366);
+k_interp=interp1(x,y,1:366);
 
 x=[kaggregate_hilow(end,1)-365; kaggregate_hilow(:,1); kaggregate_hilow(1,1)+365];
 y=[-kaggregate_hilow(end,2); -kaggregate_hilow(:,2); -kaggregate_hilow(1,2)];
-YY_low=interp1(x,y,1:366);
+k_interp_low=interp1(x,y,1:366);
 
 x=[kaggregate_hilow(end,1)-365; kaggregate_hilow(:,1); kaggregate_hilow(1,1)+365];
 y=[-kaggregate_hilow(end,3); -kaggregate_hilow(:,3); -kaggregate_hilow(1,3)];
-YY_high=interp1(x,y,1:366);
+k_interp_high=interp1(x,y,1:366);
 
 
 %% Link to and comparison with syn stuff!
@@ -29,15 +31,15 @@ YY_high=interp1(x,y,1:366);
 load('/Users/kristenhunter-cevera/MVCO_light_at_depth/syn_data_analysis/mvco_envdata_15Dec2017.mat')
 load('/Users/kristenhunter-cevera/MVCO_light_at_depth/syn_data_analysis/syndata_04Jan2017.mat')
 
-%%
+%% LIGHT AT 4m depth:
 figure, plot(1:366, light_avg,'.-'), hold on
-E_d = light_avg.*exp(4*-YY');  %DOUBLE CHECK THAT THIS IS INDEED THE RIGHT WAY TO CALCULATE THIS!!!
+E_d = light_avg.*exp(4*-k_interp');  %DOUBLE CHECK THAT THIS IS INDEED THE RIGHT WAY TO CALCULATE THIS!!!
 plot(1:366,E_d,'.-')
 
-E_d = light_avg.*exp(4*-YY_low');  %DOUBLE CHECK THAT THIS IS INDEED THE RIGHT WAY TO CALCULATE THIS!!!
+E_d = light_avg.*exp(4*-YY_k_interp_low');  %DOUBLE CHECK THAT THIS IS INDEED THE RIGHT WAY TO CALCULATE THIS!!!
 plot(1:366,E_d,'.-')
 
-E_d = light_avg.*exp(4*-YY_high');  %DOUBLE CHECK THAT THIS IS INDEED THE RIGHT WAY TO CALCULATE THIS!!!
+E_d = light_avg.*exp(4*-YY_k_interp_high');  %DOUBLE CHECK THAT THIS IS INDEED THE RIGHT WAY TO CALCULATE THIS!!!
 plot(1:366,E_d,'.-')
 
 
@@ -45,9 +47,37 @@ xlim([1 366])
 ylabel('Daily average radiation (MJ m{-2})')
 xlabel('Year day')
 set(gca,'fontsize',14)
+
+
+%% Average light over all the depths:
+stepsize=0.2;
+depths=0:stepsize:14; 
+
+for j=1:366
+    light_depth(j) = light_avg(j)./14 * stepsize * trapz(exp(depths.*-k_interp(j)'));  %DOUBLE CHECK THAT THIS IS INDEED THE RIGHT WAY TO CALCULATE THIS!!!
+end
+
+for j=1:366
+    light_depth_low(j) = light_avg(j)./14 * stepsize * trapz(exp(depths.*-k_interp_low(j)'));  %DOUBLE CHECK THAT THIS IS INDEED THE RIGHT WAY TO CALCULATE THIS!!!
+end
+
+for j=1:366
+    light_depth_high(j) = light_avg(j)./14 * stepsize * trapz(exp(depths.*-k_interp_high(j)'));  %DOUBLE CHECK THAT THIS IS INDEED THE RIGHT WAY TO CALCULATE THIS!!!
+end
+%%
+figure, plot(1:366, light_avg,'.-'), hold on
+plot(1:366,light_depth,'.-')
+plot(1:366,light_depth_low,'.-')
+plot(1:366,light_depth_high,'.-')
+
+%%
+save k_interp k_interp* light_depth*
+
 %%
 figure
 plot(Tcorr_avg, mu_avg,'o')
+
+
 
 %%
 clf
