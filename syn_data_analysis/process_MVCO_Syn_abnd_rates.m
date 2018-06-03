@@ -227,6 +227,7 @@ clearvars -except synrunavg allmatdate allsynconc allsynSSC* allsynPE* allsynvol
 syn_avg=nanmean(daily_syn,2);
 syn_avg(end)=NaN; %this is because only one year with a leap year could be included, so the average isn't really good....
 syn_std=nanstd(daily_syn,0,2);
+syn_med=nanmedian(daily_syn,2);
 
 [time_PE, daily_PE] = timeseries2ydmat(allmatdate, allsynPE); %Syn PE fluorescence
 %[time_CHL, daily_CHL] = timeseries2ydmat(allmatdate, allsynCHL); %Syn CHL fluorescence
@@ -234,9 +235,13 @@ syn_std=nanstd(daily_syn,0,2);
 [time_vol, daily_vol] = timeseries2ydmat(allmatdate, allsynvol); %Cell volume from SSC-bead normalized
 
 PE_avg=nanmean(daily_PE,2);
+PE_med=nanmedian(daily_PE,2);
 %CHL_avg=nanmean(daily_CHL,2);
 SSC_avg=nanmean(daily_SSC,2);
+SSC_med=nanmedian(daily_SSC,2);
 vol_avg=nanmean(daily_vol,2);
+vol_med=nanmedian(daily_vol,2);
+
 [PE_avg_wk, PE_std_wk] = dy2wkmn_climatology(daily_PE, synyears);
 %[CHL_avg_wk, CHL_std_wk] = dy2wkmn_climatology(daily_CHL, synyears);
 [SSC_avg_wk, SSC_std_wk] = dy2wkmn_climatology(daily_SSC, synyears);

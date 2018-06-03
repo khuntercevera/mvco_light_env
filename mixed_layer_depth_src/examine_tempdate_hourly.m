@@ -170,6 +170,7 @@ end
 
 %% more plots...
 
+figure
 subplot(2,3,1,'replace')
 plot(find_yearday(time_hour),Tbeam_hour-Tnode_hour,'.')
 xlabel('year day')
@@ -222,9 +223,11 @@ xlim([1 366])
 set(gca,'fontsize',20)
 %%
 set(gcf,'color','w')
-addpath /Users/kristenhunter-cevera/Documents/MATLAB/matlab_tools/export_fig_2016/
 
-export_fig /Users/kristenhunter-cevera/MVCO_light_at_depth/figures_for_tex_doc/hourly_deltaT_by_yearday.pdf
+%addpath /Users/kristenhunter-cevera/Documents/MATLAB/matlab_tools/export_fig_2016/
+%export_fig /Users/kristenhunter-cevera/MVCO_light_at_depth/figures_for_tex_doc/hourly_deltaT_by_yearday.pdf
+
+export_fig ~/Documents/seasons_of_syn_paper/tex_files/figures/hourly_deltaT_by_yearday.pdf
 
 %% compare with light data!
 
