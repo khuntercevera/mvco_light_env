@@ -234,6 +234,12 @@ syn_med=nanmedian(daily_syn,2);
 [time_SSC, daily_SSC] = timeseries2ydmat(allmatdate, allsynSSC); %SSC, bead normalized
 [time_vol, daily_vol] = timeseries2ydmat(allmatdate, allsynvol); %Cell volume from SSC-bead normalized
 
+[time_vol_Q, daily_vol_Q10] = timeseries2ydmat_quantile(allmatdate, allsynvol, .10);
+[time_vol_Q, daily_vol_Q90] = timeseries2ydmat_quantile(allmatdate, allsynvol, .90);
+[time_vol_Q, daily_vol_Q50] = timeseries2ydmat_quantile(allmatdate, allsynvol, .50);
+[time_vol_Q, daily_vol_min] = timeseries2ydmat_quantile(allmatdate, allsynvol, 0);
+[time_vol_Q, daily_vol_max] = timeseries2ydmat_quantile(allmatdate, allsynvol, 1);
+
 PE_avg=nanmean(daily_PE,2);
 PE_med=nanmedian(daily_PE,2);
 %CHL_avg=nanmean(daily_CHL,2);
