@@ -230,15 +230,23 @@ syn_std=nanstd(daily_syn,0,2);
 syn_med=nanmedian(daily_syn,2);
 
 [time_PE, daily_PE] = timeseries2ydmat(allmatdate, allsynPE); %Syn PE fluorescence
+
+[time_PE, daily_PE_Q50] = timeseries2ydmat_quantile(allmatdate, allsynPEmode,0.5); %Syn PE fluorescence
+PE_medmed=nanmedian(daily_PE_Q50,2);%this is the one I think I want...
+
+
 %[time_CHL, daily_CHL] = timeseries2ydmat(allmatdate, allsynCHL); %Syn CHL fluorescence
 [time_SSC, daily_SSC] = timeseries2ydmat(allmatdate, allsynSSC); %SSC, bead normalized
 [time_vol, daily_vol] = timeseries2ydmat(allmatdate, allsynvol); %Cell volume from SSC-bead normalized
 
-[time_vol_Q, daily_vol_Q10] = timeseries2ydmat_quantile(allmatdate, allsynvol, .10);
-[time_vol_Q, daily_vol_Q90] = timeseries2ydmat_quantile(allmatdate, allsynvol, .90);
-[time_vol_Q, daily_vol_Q50] = timeseries2ydmat_quantile(allmatdate, allsynvol, .50);
-[time_vol_Q, daily_vol_min] = timeseries2ydmat_quantile(allmatdate, allsynvol, 0);
-[time_vol_Q, daily_vol_max] = timeseries2ydmat_quantile(allmatdate, allsynvol, 1);
+[time_vol_Q, daily_vol_Q10] = timeseries2ydmat_quantile(allmatdate, allsynvolmode, .10);
+[time_vol_Q, daily_vol_Q90] = timeseries2ydmat_quantile(allmatdate, allsynvolmode, .90);
+[time_vol_Q, daily_vol_Q50] = timeseries2ydmat_quantile(allmatdate, allsynvolmode, .50);
+[time_vol_Q, daily_vol_min] = timeseries2ydmat_quantile(allmatdate, allsynvolmode, 0);
+[time_vol_Q, daily_vol_max] = timeseries2ydmat_quantile(allmatdate, allsynvolmode, 1);
+
+vol_medmed=nanmedian(daily_vol_Q50,2);%this is the one I think I want...
+
 
 PE_avg=nanmean(daily_PE,2);
 PE_med=nanmedian(daily_PE,2);
@@ -246,6 +254,7 @@ PE_med=nanmedian(daily_PE,2);
 SSC_avg=nanmean(daily_SSC,2);
 SSC_med=nanmedian(daily_SSC,2);
 vol_avg=nanmean(daily_vol,2);
+vol_avg_mode=nanmean(daily_vol_mode,2);
 vol_med=nanmedian(daily_vol,2);
 
 [PE_avg_wk, PE_std_wk] = dy2wkmn_climatology(daily_PE, synyears);
@@ -273,6 +282,8 @@ vol_mode_avg=nanmean(daily_volmode,2);
 % syn_avg_wk=nanmean(weekly_syn,2);
 % syn_std_wk=nanstd(weekly_syn,0,2);
 
+[PEQ50_wkmed] = dy2wkmn_medclimatology(daily_PE_Q50, synyears);
+[volQ50_wkmed] = dy2wkmn_medclimatology(daily_vol_Q50, synyears);
 
 %% Division rates from the model:
 %-----------------------------------------------------------------------------------------------------------------------------------------------
