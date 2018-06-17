@@ -201,17 +201,20 @@ end
 
 %%
 % remove nan's
+
 ii=find(~isnan(allmatdate));
 allmatdate=allmatdate(ii); allsynconc=allsynconc(ii);
 
 allsynPE=allsynPE(ii); %allbeads=allbeads(ii,:);
 allsynPEmode=allsynPEmode(ii);
-% allsynCHL=allsynCHL(ii);
-% allsynCHLmode=allsynCHLmode(ii);
 allsynSSC=allsynSSC(ii);
 allsynSSCmode=allsynSSCmode(ii);
 allsynvol=allsynvol(ii);
 allsynvolmode=allsynvolmode(ii);
+
+% allsynCHL=allsynCHL(ii);
+% allsynCHLmode=allsynCHLmode(ii);
+
 %allmatdate=allmatdate-4/24; %shift from UTC time to local time
 
 %smooth the abundance data over 48 hours, with data separated by 1 day
@@ -222,69 +225,72 @@ clearvars -except synrunavg allmatdate allsynconc allsynSSC* allsynPE* allsynvol
 
 %% bin syn cell abundance:
 
+%from average values:
 [time_syn_ns_dy, daily_syn_ns] = timeseries2ydmat(allmatdate, allsynconc); %raw, unsmoothed abundance
 [time_syn, daily_syn, synyears, ydmu] = timeseries2ydmat(allmatdate, synrunavg); %smoothed abundance
+[time_PE, daily_PE] = timeseries2ydmat(allmatdate, allsynPE); %Syn PE fluorescence
+[time_SSC, daily_SSC] = timeseries2ydmat(allmatdate, allsynSSC); %SSC, bead normalized
+[time_vol, daily_vol] = timeseries2ydmat(allmatdate, allsynvol); %Cell volume from SSC-bead normalized
+%[time_CHL, daily_CHL] = timeseries2ydmat(allmatdate, allsynCHL); %Syn CHL fluorescence
+
 syn_avg=nanmean(daily_syn,2);
 syn_avg(end)=NaN; %this is because only one year with a leap year could be included, so the average isn't really good....
 syn_std=nanstd(daily_syn,0,2);
 syn_med=nanmedian(daily_syn,2);
-
-[time_PE, daily_PE] = timeseries2ydmat(allmatdate, allsynPE); %Syn PE fluorescence
-
-[time_PE, daily_PE_Q50] = timeseries2ydmat_quantile(allmatdate, allsynPEmode,0.5); %Syn PE fluorescence
-PE_medmed=nanmedian(daily_PE_Q50,2);%this is the one I think I want...
-
-
-%[time_CHL, daily_CHL] = timeseries2ydmat(allmatdate, allsynCHL); %Syn CHL fluorescence
-[time_SSC, daily_SSC] = timeseries2ydmat(allmatdate, allsynSSC); %SSC, bead normalized
-[time_vol, daily_vol] = timeseries2ydmat(allmatdate, allsynvol); %Cell volume from SSC-bead normalized
-
-[time_vol_Q, daily_vol_Q10] = timeseries2ydmat_quantile(allmatdate, allsynvolmode, .10);
-[time_vol_Q, daily_vol_Q90] = timeseries2ydmat_quantile(allmatdate, allsynvolmode, .90);
-[time_vol_Q, daily_vol_Q50] = timeseries2ydmat_quantile(allmatdate, allsynvolmode, .50);
-[time_vol_Q, daily_vol_min] = timeseries2ydmat_quantile(allmatdate, allsynvolmode, 0);
-[time_vol_Q, daily_vol_max] = timeseries2ydmat_quantile(allmatdate, allsynvolmode, 1);
-
-vol_medmed=nanmedian(daily_vol_Q50,2);%this is the one I think I want...
-
-
 PE_avg=nanmean(daily_PE,2);
 PE_med=nanmedian(daily_PE,2);
-%CHL_avg=nanmean(daily_CHL,2);
 SSC_avg=nanmean(daily_SSC,2);
 SSC_med=nanmedian(daily_SSC,2);
 vol_avg=nanmean(daily_vol,2);
-vol_avg_mode=nanmean(daily_vol_mode,2);
 vol_med=nanmedian(daily_vol,2);
+%CHL_avg=nanmean(daily_CHL,2);
+
+%and weekly:
+[weekly_syn, time_syn_wk, yd_wk] = ydmat2weeklymat(daily_syn, synyears);
+[syn_avg_wk, syn_std_wk] = dy2wkmn_climatology(daily_syn, synyears);
+% syn_avg_wk=nanmean(weekly_syn,2);
+% syn_std_wk=nanstd(weekly_syn,0,2);
 
 [PE_avg_wk, PE_std_wk] = dy2wkmn_climatology(daily_PE, synyears);
 %[CHL_avg_wk, CHL_std_wk] = dy2wkmn_climatology(daily_CHL, synyears);
 [SSC_avg_wk, SSC_std_wk] = dy2wkmn_climatology(daily_SSC, synyears);
 [vol_avg_wk, vol_std_wk] = dy2wkmn_climatology(daily_vol, synyears);
 
-%for the modes:
+%averages from the modes:
+
 [time_PEmode, daily_PEmode] = timeseries2ydmat(allmatdate, allsynPEmode); %Syn PE fluorescence
-%[time_CHLmode, daily_CHLmode] = timeseries2ydmat(allmatdate, allsynCHLmode); %Syn CHL fluorescence
 [time_SSCmode, daily_SSCmode] = timeseries2ydmat(allmatdate, allsynSSCmode); %smoothed abundance
 [time_volmode, daily_volmode] = timeseries2ydmat(allmatdate, allsynvolmode); %smoothed abundance
+%[time_CHLmode, daily_CHLmode] = timeseries2ydmat(allmatdate, allsynCHLmode); %Syn CHL fluorescence
 
 PE_mode_avg=nanmean(daily_PEmode,2);
-%CHL_mode_avg=nanmean(daily_CHLmode,2);
 SSC_mode_avg=nanmean(daily_SSCmode,2);
 vol_mode_avg=nanmean(daily_volmode,2);
+%CHL_mode_avg=nanmean(daily_CHLmode,2);
+
 [PE_mode_avg_wk, PE_mode_std_wk] = dy2wkmn_climatology(daily_PEmode, synyears);
-%[CHL_mode_avg_wk, CHL_mode_std_wk] = dy2wkmn_climatology(daily_CHLmode, synyears);
 [SSC_mode_avg_wk, SSC_mode_std_wk] = dy2wkmn_climatology(daily_SSCmode, synyears);
 [vol_mode_avg_wk, vol_mode_std_wk] = dy2wkmn_climatology(daily_volmode, synyears);
+%[CHL_mode_avg_wk, CHL_mode_std_wk] = dy2wkmn_climatology(daily_CHLmode, synyears);
 
-[weekly_syn, time_syn_wk, yd_wk] = ydmat2weeklymat(daily_syn, synyears);
-[syn_avg_wk, syn_std_wk] = dy2wkmn_climatology(daily_syn, synyears);
-% syn_avg_wk=nanmean(weekly_syn,2);
-% syn_std_wk=nanstd(weekly_syn,0,2);
+
+%medians and max/min from the mode values:
+[time_vol_Q, daily_vol_Q10] = timeseries2ydmat_quantile(allmatdate, allsynvolmode, .10);
+[time_vol_Q, daily_vol_Q90] = timeseries2ydmat_quantile(allmatdate, allsynvolmode, .90);
+[time_vol_Q, daily_vol_Q50] = timeseries2ydmat_quantile(allmatdate, allsynvolmode, .50);
+[time_vol_Q, daily_vol_min] = timeseries2ydmat_quantile(allmatdate, allsynvolmode, 0);
+[time_vol_Q, daily_vol_max] = timeseries2ydmat_quantile(allmatdate, allsynvolmode, 1);
+
+[time_PE, daily_PE_Q50] = timeseries2ydmat_quantile(allmatdate, allsynPEmode,0.5); %Syn PE fluorescence
+
+vol_medmed=nanmedian(daily_vol_Q50,2);%this is the one I think I want...
+vol_medmax=nanmedian(daily_vol_max,2);
+vol_medmin=nanmedian(daily_vol_min,2);
+PE_medmed=nanmedian(daily_PE_Q50,2);%this is the one I think I want...
 
 [PEQ50_wkmed] = dy2wkmn_medclimatology(daily_PE_Q50, synyears);
 [volQ50_wkmed] = dy2wkmn_medclimatology(daily_vol_Q50, synyears);
-
+[volmin_wkmed] = dy2wkmn_medclimatology(daily_vol_min, synyears);
 %% Division rates from the model:
 %-----------------------------------------------------------------------------------------------------------------------------------------------
 
