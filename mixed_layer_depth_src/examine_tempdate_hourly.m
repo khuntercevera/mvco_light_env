@@ -210,6 +210,26 @@ xlabel('year day')
 ylabel('maximum difference in a day between 4 m beam and 12 m node')
 xlim([1 366])
 
+%% just to see how many days we are workign with (and where the gaps come from)
+
+subplot(2,1,1,'replace')
+plot(time_hour,Tbeam_hour-Tnode_hour,'.')
+xlim([datenum('1-1-03') datenum('12-31-17')])
+datetick('x','keeplimits')
+hold on
+ii=find(~isnan(Tbeam_hour)); jj=find(~isnan(Tnode_hour));
+plot(time_hour(ii),5*ones(size(ii)),'.')
+plot(time_hour(jj),4.5*ones(size(jj)),'.')
+% plot(time_hour,Tbeam_hour/20,'r.')
+% plot(time_hour,Tnode_hour/10,'.')
+ylim([-2 6])
+legend('\DeltaT','beam T available','node T available')
+
+subplot(2,1,2,'replace')
+ii=find(~isnan(maxdiff_day(:,1)));
+hist(find_yearday(unqdays(ii)),366)
+xlim([1 366])
+ylabel('Frequency of year days')
 %% save this figure for tex document:
 
 %shows spread of values, but also that distinct seasonality:
@@ -323,6 +343,7 @@ for q=1:length(unqdays)
     
 end
 
+%above_06=[ number of hours over 0.6 deltaT     number hours within daylight available    hours of daylight]
 %% sort so can put in a bar chart:
 
 %bin by week:
@@ -347,13 +368,59 @@ set(hbar,'yticklabel',cellstr(num2str((0:0.1:1)')))
 xlabel('Year Day')
 ylabel('Frequency')
 title('Percentage of day light hours "stratified" for available days in dataset')
+%%
 
+%and by day:
+
+unq_yrdy=find_yearday(unqdays);
+rec=nan(366,12);
+
+for j=1:366
+    jj=find(unq_yrdy ==j & ~isnan(above_06(:,2)) & (above_06(:,2)./above_06(:,3) > 0.8));
+    %find yearday and only consider days where at least 0.8 of the hours of the day are available
+    rec(j,1:11)=histc(above_06(jj,1)./above_06(jj,2),0:0.1:1)';
+    rec(j,12)=sum(rec(j,1:11));
+end
+
+%%
+
+%custom colormap:
+en=[0 0 0.4]; %blue
+st=[0 0.8 1]; %cyan
+R = linspace(st(1),en(1),6);
+G = linspace(st(2),en(2),6);
+B = linspace(st(3),en(3),6);
+
+bluemap = [R', G', B'];
+
+st=[1 0.3 0]; %orange
+en=[0.4 0 0]; %red
+R = linspace(st(1),en(1),4);
+G = linspace(st(2),en(2),4);
+B = linspace(st(3),en(3),4);
+
+redmap = [R', G', B'];
+
+redblue=[bluemap(end:-1:1,:); redmap];
+
+
+clf
+bar(1:366,rec(:,1:11),1,'stacked') %hooray!
+xlim([0 367]) %breathing space
+colormap(redblue)
+hbar=colorbar;
+set(hbar,'yticklabel',cellstr(num2str((0:0.1:1)')))
+xlabel('Year Day')
+ylabel('Frequency of days')
+ylabel(hbar,{'Fraction of stratified hours' ; 'within a day'})
+%title('Percentage of day light hours "stratified" for available days in dataset')
+set(gca,'fontsize',18)
 %%
 set(gcf,'color','w')
 addpath /Users/kristenhunter-cevera/Documents/MATLAB/matlab_tools/export_fig_2016/
 
-export_fig /Users/kristenhunter-cevera/MVCO_light_at_depth/figures_for_tex_doc/percentage_hours_stratified.pdf
-
+export_fig /Users/kristenhunter-cevera/MVCO_light_at_depth/figures_for_tex_doc/percentage_hours_stratified_day.pdf
+export_fig /Users/kristenhunter-cevera/seasons_of_syn_paper/tex_files/figures/percentage_hours_stratified_day.pdf
 %% see how many days would have some type of stratification in the
 clf
 plot(find_yearday(unqdays),above_06(:,2),'.')
