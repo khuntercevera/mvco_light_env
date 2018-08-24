@@ -89,33 +89,33 @@ for yearlabel=2003:2016
     beadCHLmatch=mvco_interpolation(beadresults(:,1),sm_bead_avgCHL,cellresultsall(to_use,1),1);
 
     % and plot to check!
-    figure(13)
-    subplot(3,1,1,'replace'), hold on
-    plot(beadresults(:,1),beadresults(:,13),'.--')
-    plot(beadresults(:,1),sm_bead_avgSSC,'o')
-    plot(cellresultsall(to_use),beadmatch,'.')
-    datetick('x','mm/dd')
-    ylabel('Bead mean SSC')
-    legend('bead data','smoothed bead data','matched data')
-    title(num2str(yearlabel))
-    
-    subplot(3,1,2,'replace'), hold on
-    plot(beadresults(:,1),beadresults(:,10),'.--')
-    plot(beadresults(:,1),sm_bead_avgPE,'o')
-    plot(cellresultsall(to_use),beadPEmatch,'.')
-    datetick('x','mm/dd')
-    ylabel('Bead mean PE')
-    legend('bead data','smoothed bead data','matched data')
-    
-    subplot(3,1,3,'replace'), hold on
-    plot(beadresults(:,1),beadresults(:,12),'.--')
-    plot(beadresults(:,1),sm_bead_avgCHL,'o')
-    plot(cellresultsall(to_use),beadCHLmatch,'.')
-    datetick('x','mm/dd')
-    ylabel('Bead mean CHL')
-    legend('bead data','smoothed bead data','matched data')
-    
-    keyboard
+%     figure(13)
+%     subplot(3,1,1,'replace'), hold on
+%     plot(beadresults(:,1),beadresults(:,13),'.--')
+%     plot(beadresults(:,1),sm_bead_avgSSC,'o')
+%     plot(cellresultsall(to_use),beadmatch,'.')
+%     datetick('x','mm/dd')
+%     ylabel('Bead mean SSC')
+%     legend('bead data','smoothed bead data','matched data')
+%     title(num2str(yearlabel))
+%     
+%     subplot(3,1,2,'replace'), hold on
+%     plot(beadresults(:,1),beadresults(:,10),'.--')
+%     plot(beadresults(:,1),sm_bead_avgPE,'o')
+%     plot(cellresultsall(to_use),beadPEmatch,'.')
+%     datetick('x','mm/dd')
+%     ylabel('Bead mean PE')
+%     legend('bead data','smoothed bead data','matched data')
+%     
+%     subplot(3,1,3,'replace'), hold on
+%     plot(beadresults(:,1),beadresults(:,12),'.--')
+%     plot(beadresults(:,1),sm_bead_avgCHL,'o')
+%     plot(cellresultsall(to_use),beadCHLmatch,'.')
+%     datetick('x','mm/dd')
+%     ylabel('Bead mean CHL')
+%     legend('bead data','smoothed bead data','matched data')
+%     
+%     keyboard
 
     allmatdate=[allmatdate; cellresultsall(to_use,1)];
     allsynconc=[allsynconc; cellNUMall(to_use,1)./cellresultsall(to_use,3)]; %syn cell counts
@@ -481,11 +481,12 @@ CHL_mode_avg=nanmean(daily_CHLmode,2);
 %[time_vol_Q, daily_vol_max] = timeseries2ydmat_quantile(allmatdate-4/24, allsynvolmode, 1);
 
 [time_vol_Q, daily_vol_min] = timeseries2ydmat_quantile(allmatdate-4/24, allsynvolmode, 0);
+[time_vol_Q, daily_vol_max] = timeseries2ydmat_quantile(allmatdate-4/24, allsynvolmode, 1);
 
 [time_PE, daily_PE_min] = timeseries2ydmat_quantile(allmatdate-4/24, allsynPEmode,0); %Syn PE fluorescence
 [time_PE, daily_PE_max] = timeseries2ydmat_quantile(allmatdate-4/24, allsynPEmode,1); %Syn PE fluorescence
 
-%vol_avgmax=nanmedian(daily_vol_max,2);
+vol_avgmax=nanmedian(daily_vol_max,2);
 vol_avgmin=nanmedian(daily_vol_min,2);
 
 PE_avgmax=nanmedian(daily_PE_max,2);
