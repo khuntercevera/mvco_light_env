@@ -3,7 +3,6 @@
 
 
 % temperature from the beam: every hour:
-
 mdate = [];
 T = [];
 
@@ -121,6 +120,9 @@ for j=[2004 2006 2007 2008 2010 2011 2012 2014 2015 2016]
     
 end
 
+%% this seems to be saved as temp_hourly_beam_node.mat!
+
+%save ~/MVCO_light_at_depth/mixed_layer_depth_src/temp_hourly_beam_node Tbeam_hour Tnode_hour time_hour
 
 %% okay, now, let's plot and look at difference!
 
@@ -281,7 +283,7 @@ for year=2003:2017
     
 end
 
-% record rough dawn and dusks:
+%% record rough dawn and dusks:
 dawn_dusk=nan(length(unqdays),2);
 for q=1:length(unqdays)
     jj=find(floor(solar_time-4/24)==unqdays(q));
