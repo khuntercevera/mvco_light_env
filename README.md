@@ -1,14 +1,12 @@
-# MVCO_light_at_depth
+# mvco_light_env
 
-Estimation of light environment at MVCO at 4m depth using data from:
-radiometer casts and CTD casts
+Estimate in situ light environment at MVCO at 4m depth using data from:
+radiometer casts, CTD casts, and temperature differences between beam and node records
 
-The various pieces are:
+The scripts in this repo:
 
---Estimate attentuation coefficients (k's) from radiometer casts
+---Estimate attentuation coefficients (k's) from radiometer casts
 
----See if relationship between k and chlorophyll
+---Understand relationship between temperature and density in available CTD casts. Use this relationship to relate temperature diffrences over time to denisty and stratification over time - how often is the water column well mixed? 
 
----If so, see if relationship between fluorometer and cholorphyll data to be able to model light environment over entire timeseries from    fluorescence -> chl -> k -> light at depth
-
----Use density information to see if stratification would limit cells movement in the water column and if this would affect the amount of light they experience
+---Apply k-relationships to climatology of incident light for in-situ light levels
