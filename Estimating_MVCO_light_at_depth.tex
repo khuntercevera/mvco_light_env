@@ -1,5 +1,5 @@
 \documentclass[11pt]{article}
-\usepackage{geometry}                % See geometry.pdf to learn the layout options. There are lots.
+\usepackage[margin=0.8in]{geometry}                % See geometry.pdf to learn the layout options. There are lots.
 \geometry{letterpaper}                   % ... or a4paper or a5paper or ... 
 %\geometry{landscape}                % Activate for for rotated page geometry
 %\usepackage[parfill]{parskip}    % Activate to begin paragraphs with an empty line rather than an indent
@@ -17,42 +17,72 @@
 \maketitle
 \section{Overview}
 
-Our goal is to estimate the light intensity (and possible quality) at 4 m depth at MVCO to be able to relate division rates of \textit{Synechococcus} to the in situ light environment (rather than the incident light) as best we can. This is involves quite a few different measurements and quite a few different assumptions for an estimation. The pieces and how they link together are diagrammed as follows:
+Our goal is to estimate the light intensity (and possible quality) at 4 m depth at MVCO to relate division rates of \textit{Synechococcus} to the in situ light environment (rather than the incident light) as best we can. This is involves quite a few different measurements and quite a few different assumptions for an estimation. At the moment, we're construction an estimate from:
+\begin{itemize}\item time series of incident solar radiation
+\item attenuation coefficients from available radiometer\item estimation of stratification at MVCO from continuous temperature records at two depths.
+\end{itemize}
 
 \section{Radiometer data processing}
+
+\noindent The scripts used to do so are summarized below:  
+
+\begin{table}[h!]
+    \begin{tabular}{ | l  | p{5cm} | p{3cm} | } % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
+    \hline
+    script & description & specific products \\  \hline
+      \path{processPROII_MVCO.m} & converts raw files to matlab and text files, 
+      corrects with dark measurements and calculates PAR & see Table 2\\
+      \hline
+      \path{latlon_processing.m} & identifies latitude and longitude for all casts & \\  \hline
+      \path{PAR_attenuation_coeffiecient_processing.m} & calculate and save k$_{PAR}$ &\\  \hline
+      \path{wavelength_attentuation_coefficient_processing.m} & calculate and save k$(\lambda)$'s & \\ \hline
+      \path{k_relationships.m} & organizes k-values for PAR, overview plots, explores relationships with chl & \path{k_lite.mat} \\  \hline
+     \path{wavelength.m} & exploration and plots of spectra over yearday & \\ \hline
+     \path{apply_k_to_incident_light.m} & interpolate k values for annual cycle and apply to incident radiation & \path{k_interp.mat}\\ \hline
+    \end{tabular}
+\end{table}
+
 \subsection{raw files to text readables}
-The files that are generated from the HyperPro radiometer have a `~.raw' extension. The `~.raw` files contain all the unconverted measurements from all the sensors incorporated into the HyperPro. For this exercise though, we're really only concerned with the measurements from the MPR (depth sensor), 284 (downwelling irradiance), and 285 (solar reference). Pitch, angle, roll, upwelling irradiance, and more are also measured by the HyperPro, but for just a first glance at the ligth field at depth, these can be excluded. To convert the raw files into a readable text file, we need the calibration data for each sensor and the program SatCon, which applies the conversion from the calibration files. This can all be done in with the matlab script: \path{processPROII_KRHC.m}. The program SatCon (as long as available in the path) is called directly from within Matlab. This script does the conversion to a text file output, and then imports the textfile to make matlab files with useful raw and processed variables. The raw files can be found in : \path{\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\raw_data\}. In this folder, each day's measurements and casts are contained in a folder labelled by the date. The processed .txt and .mat files are stored in a similar file structure to the one found in \url{raw_data}, where each day has it's own folder at \url{\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\processed_radiometer_files}. In each day folder there are \url{converted_txtfiles} and \url{mat_outfiles} folders, the latter contains .mat files for each individual casts as well as .mat files that have data and products for all the casts for that day.
+The files that are generated from the HyperPro radiometer have a `~.raw' extension. The `~.raw' files contain all the unconverted measurements from all the sensors incorporated into the HyperPro. For our purposes, we're really only concerned with the measurements from the MPR (depth sensor), 284 (downwelling irradiance), and 285 (solar reference). Pitch, angle, roll, upwelling irradiance, and more, are also measured by the HyperPro, but those will be excluded for now. To convert the raw files into a readable text file, we need the calibration data for each sensor and the program SatCon, which applies the conversion from the calibration files. This can all be done in matlab with the script: \path{processPROII_MVCO.m}. The program SatCon (as long as available in the path) is called directly from within matlab. This script does the conversion to a text file output, and then imports the textfile to make matlab files with useful raw and processed variables. The raw files can be found in : \path{\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\raw_data\}. In this folder, each day's measurements and casts are contained in a folder labelled by the date. The processed .txt and .mat files are stored in a similar file structure to the one found in \url{raw_data}, where each day has it's own folder at \url{\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\processed_radiometer_files}. In each day folder there are \url{converted_txtfiles} and \url{mat_outfiles} folders, the latter contains .mat files for each individual casts as well as .mat files that have data and products for all the casts for that day.
 
-With each of the light sensors there are dark measurements - these are necessary because temperature of the sensor can affect the measurement and these are corrected with corresponding dark measurements. In the \path{processPROII_KRHC.m} script, the nearest dark measurement in time is simply subtracted from the light measurement. PAR is calculated as the integral over wavelengths 400 - 700 nm. The light measurements are then time-synced to the MPR sensor, which has more frequent measurements. Some plots for sanity-checks are also produced if the plotflag is changed to one. If it hasn't been created, the script will prompt the user for a quality comment on each cast, such as `not a cast' or `good cast'. This information is used later down the line for screening of files to use in calculation of attenuation coefficients.
+For each of the light sensors there are corresponding dark measurements - these are necessary because temperature of the sensor can affect the measurement. This is corrected using the dark measurements. In \path{processPROII_MVCO.m}, the nearest dark measurement in time is simply subtracted from the light measurement. PAR is calculated as the integral over wavelengths 400 - 700 nm. The light measurements are then time-synced to the MPR sensor, which has more frequent measurements. Some plots for sanity-checks are also produced if the plotflag is changed to one. If it hasn't been created, the script will prompt the user for a quality comment on each cast, such as `not a cast' or `good cast'. This information is used later down the line for screening of files to use in calculation of attenuation coefficients.
 
-The following variables in the data .mat variable for each cast are:
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{| l | l |}
+\hline
+\textbf{variable} & \textbf{info} \\
+\hline
+ file name & \\
+cruiseID & (not always entered) \\
+operator  &(not always entered)\\
+ latitude  &(not always entered) \\
+ longitude &(not always entered)\\
+ timestamp  &\\
+  pressure\_tare  & \\
+ emptyflag & data file was empty \\
+  adj\_esl & dark adjusted solar standard\\
+  adj\_edl & dark adjusted downwelling\\
+  esl\_PAR & solar standard PAR\\
+ edl\_PAR & downwelling PAR\\
+ edl\_ind & index that matches MPR data\\
+  esl\_ind & index that matches MPR data\\
+   mprtime & matlab date\\
+ solarflag & anything fishy for how light looks?\\
+  depth &\\
+wavelen\_solarst & wavelengths corresponding to solarstd measurements\\
+wavelen\_downwell & wavelengths corresponding to downwelling measurements\\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
 
-\begin{itemize}
-\item file name
-\item  cruiseID (not always entered)
-\item operator  (not always entered)
-\item latitude (not always entered) 
-\item   longitude (not always entered)
-\item    timestamp 
-\item    pressure\_tare 
-\item    emptyflag: data file was empty 
-\item    adj\_esl: dark adjusted solar standard
-\item    adj\_edl: dark adjusted downwelling
-\item    esl\_PAR: solar standard PAR
-\item    edl\_PAR: downwelling PAR
-\item    edl\_ind: index that matches MPR data
-\item    esl\_ind: index that matches MPR data
-\item    mprtime: matlab date
-\item    solarflag: anything fishy for how light looks?
-\item    depth
-\item wavelen\_solarst: wavelengths corresponding to solarstd measurements
-\item wavelen\_downwell: wavelengths corresponding to downwelling measurements
-\end{itemize}
+\clearpage
 
 \subsection{finding the lat/lon}
 
-Unfortunately, for a lot of the casts, the position was not entered or recorded. So, this means we have to check it against the event log and sort out which recorded lat/lon goes with each cast. Not too terrible, as there will be typically be one cast per station and the timing of the cast plus depth helps to discern position. All of this is accomplished in latlon\_processing.m. It also corrects for some suspecting UTC offsets due to daylight savings time.
-Below is a plot of the recovered / best guesses for lat and lon. The circles represent the known stations that were visited in past all-day long cruises at MVCO, which includes the tower and the node.
+Unfortunately, for a lot of the casts, the position was not entered or recorded. So, this means we have to check it against the event log and sort out which recorded lat/lon goes with each cast. Not too terrible, as there will be typically be one cast per station and the timing of the cast plus depth helps to discern position. All of this is accomplished in \path{latlon_processing.m}. It also corrects for some suspecting UTC offsets due to daylight savings time.
+Below is a plot of the recovered / best guesses for lat and lon. The circles represent the known stations that were visited in past all-day long cruises at MVCO, which includes the tower and the node. The lat/lon for each cast is recorded in structure variable in a separate .mat file in each day's cast folder as described above.
 
  \begin{figure}[h]
 \centering
@@ -62,26 +92,35 @@ Below is a plot of the recovered / best guesses for lat and lon. The circles rep
 
 \clearpage
 
-\subsection{estimating the attenuation coefficients, k($\lambda$) and $k_{PAR}$}
+\subsection{Estimating attenuation coefficients, k($\lambda$) and k$_{PAR}$}
 
-Saved matlab variables (generated from \path{processPROII_KRHC.m}) are imported with the script \path{PAR_attenuation_coeffiecient_processing.m}, and used to estimate a the attenuation coefficient k for PAR. Now k can be estimated for each wavelength, but this is done in a later script (see below). K is calculated as the slope of a regression line that is fitted through log transformed data against depth of either light recorded at each wavelength or from PAR.  Smoothed depth data from the cast is used, and measurements near the top and bottom are not used. On occasion, the points had to be manually chosen to exclude bad data from a cast. The fit, values, indices and any flags are stored in a structure, K\_PAR, for each cast and save by date. This same script allows the user to load in the calculated K's and examine the fits and data points used. For some casts, a single linear regression did not seem appropriate, so the cast was split at depth (by eye) and the two pieces fit separately. A designation of `1' refers to the portion of the cast most near the surface. The various flags for the K\_PAR variable and data are:
+Saved matlab variables (generated from \path{processPROII_MVCO.m}) are imported with the script \path{PAR_attenuation_coeffiecient_processing.m}, and used to estimate a the attenuation coefficient k for PAR. Now k can be estimated for each wavelength, but this is done in a later script (see below). K is calculated as the slope of a regression line that is fitted through log transformed data against depth of either light recorded at each wavelength or from PAR.  Smoothed depth data from the cast is used, and measurements near the top and bottom are not used. On occasion, the points had to be manually chosen to exclude bad data from a cast. The fit, values, indices and any flags are stored in a structure, K\_PAR, for each cast and save by date. This same script allows the user to load in the calculated K's and examine the fits and data points used. For some casts, a single linear regression did not seem appropriate, so the cast was split at depth (by eye) and the two pieces fit separately. A designation of `1' refers to the portion of the cast most near the surface. The various flags for the K\_PAR variable and data are:
 
-\begin{itemize}
-\item 0: good cast
-\item 1: empty file or not a cast
-\item 2: too short a cast to get reliable k
-\item 3: split cast; expect two regressions
-\end{itemize}
 
-\noindent An aside note: it turns out that the ProSoft software made to do these types of calculations actually does not calculate an attenuation coefficient for PAR (it does so for each individual wavelength, and calculates PAR, but will NOT calculate K-PAR). 
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{| l | l |}
+\hline
+0 & good cast \\
+1 & empty file or not a cast \\
+2 & too short a cast to get reliable k \\
+3 & split cast; expect two regressions \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+\vspace{-5mm}
+\noindent All of these variables and fits are saved in a structure variable, in a separate .mat file in each cast folder as above. A side note: it turns out that the ProSoft software made to do these types of calculations actually does not calculate an attenuation coefficient for PAR (it does so for each individual wavelength, and calculates PAR, but will NOT calculate K-PAR). 
 
-This data is then used to generate an attenuation coefficient for each k 
+To calculate k for each wavelength, this is done with \path{wavelength_attentuation_coefficient_processing.m}, which outputs a similar structure variable as for k$_{PAR}$.
+
+
 
 
 
 \subsection{Relationships with k}
 
-The script \path{k_relationships.m} gives some nice overview plots of where we have data for, which data we're using near the tower, and what k looks like over time. This script also imports chlorophyll data, matches k-values by date and then tries to make some relationships. Overall, things aren't terrible between k and chl, although this relationship does differ from Morel 1988 or Morel \& Maritorena 2001.
+The script \path{k_relationships.m} aggregates and organizes the k$_{PAR}$ values over all the casts for use downstream (i.e. to calculate climatology of light at depth). It also gives some nice overview plots of where we have data for, which data we're using near the tower, and what k looks like over time. This script also imports chlorophyll data, matches k-values by date and then tries to make some relationships. Overall, things aren't terrible between k and chl, although this relationship does differ from Morel 1988 or Morel \& Maritorena 2001. While there may be decent relationship between chl and k, we only have chl values for specific dates. One way around this is to use fluorometer data as a proxy for chl and make a model from that to use in a yearday k-model. This was more in-depth than we had time for at the moment, but would be cool to explore in the future!
 
  
  \begin{figure}[h]
@@ -92,7 +131,8 @@ The script \path{k_relationships.m} gives some nice overview plots of where we h
 
 \clearpage
 
-Another script \url{wavelength.m} looks at the color of light as it changes. For the most part, the light is indeed green, but the max wavelength reaching depths does shuffle about:
+Another script \path{wavelength.m} looks at the distribution of energy in different wavelengths, and at different depths. For the most part, the light is indeed green, but the wavelength with the maximum energy can shift towards blues, depending on time of year. 
+
  \begin{figure}[h]
 \centering
 \includegraphics[width=\textwidth]{figures_for_tex_doc/wavelengths.png}
@@ -100,26 +140,30 @@ Another script \url{wavelength.m} looks at the color of light as it changes. For
 \end{figure}
 
 
-\subsection{chl-to-fluorescence match}
+\section{Evaluating water column stratification}
 
-So, there seems to be a decent relationship between chl and k, but we only have chl values for specific dates. One way around this is to use fluorometer data as a proxy for chl and make a model from that to use in a yearday k-model
+Scripts used in this process:
 
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{ | l  | p{6cm} | p{3cm} | } 
+    \hline
+    script & description & specific products \\  \hline
+\path{ctd_raw2cnv_processing.m} & script that process raw CTD data (either .hex or .dat files) into readable .cnv files via Sea-Bird SBE Data (note: script should be run on a machine that has this software installed). & \\ \hline
+\path{import_ctd_casts.m} &  imports processed CTD data (.cnv files) into a structure storage array (calls \path{import_cnv.m}) & \\ \hline
+\path{import_cnv.m} &  imports .cnv file into matlab variables & \\ \hline
+\end{tabular}
+\end{center}
+\end{table}
+\clearpage
 
-\section{Estimating a Mixed Layer Depth}
+So, now that we have a rough idea of the light level at certain times of year, we can add another layer of information to guide our estimate. And that is trying to gauge how cells might be mixing within the water column. Typically, MVCO is well mixed, being so shallow, but stratification does happen, particularly in the summer months, and we'd like to be able to say if cells are seeing all of the water column (and light levels) or just part of it (and higher or lower light levels). Density data requires temperature, salinity and depth to calculate, but we only have some of these variables at two depths (4m at beam, 12m at node) over time, making it difficult to estimate what the entire structure of the water column would look like. Furthermore, salinity data at some time points is unreliable, making density estimates unavailable.
 
-So, now that we may have a rough idea of the light level at certain times of year, we can add another layer of information to guide our estimate. And that is trying to gauge how cells might be mixing within the water column. Typically, MVCO is well mixed, being so shallow, but stratification does happen, particularly in the summer months, and we'd like to be able to say if cells are seeing all of the water column (and light levels) or just part of it (and higher or lower light levels). Density data requires temperature, salinity and depth to calculate, but we would only have some of these variables at two depths (4m at beam, 12m at node), making it difficult to estimate what the entire structure of the water column would look like. Furthermore, salinity data at some time points is unreliable, making density estimates unavailable.
-
-One idea is to use the temperature difference between the 4m tower beam and 12m as a proxy for density difference. To see if this is a viable idea, we can examine CTD casts: look to see if they have any stratification, and how does this relate to a density difference and then temperature difference at 4 and 12 meters?  
+One idea is to use the temperature difference between the 4m tower beam and 12m as a proxy for density difference. To see if this is a viable idea, we can examine CTD casts: look to see if they have any stratification, and how does this relate to a density difference and then temperature difference at 4 and 12 meters.  
 
 \subsection{processing CTD casts}
 
 The raw CTD casts are located in a folder at: \path{\\maddie\TaylorF\from_Samwise\data\MVCO\}, and in order to keep processing consistent, these raw casts are processed with matlab scripts, rather than using the Seabird software (where it might be ambiguous as to what averaging / quality control is happening). The scripts that do the processing are as follows:
-
-\begin{itemize}
-\item \path{ctd_raw2cnv_processing.m}: script that process raw CTD data (either .hex or .dat files) into readable .cnv files via Sea-Bird SBE Data (note: script should be run on a machine that has this software installed).
-\item \path{import_ctd_casts.m}: imports processed CTD data (.cnv files) into a structure storage array (calls \path{import_cnv.m})
-\item  \path{import_cnv.m}:  imports .cnv file into matlab variables
-\end{itemize}
 
 \noindent The .cnv (text readable) files have been temporarily stored in: \path{\\sosiknas1\Lab\data\MVCO\processed_CTD_casts\}
 
@@ -127,14 +171,14 @@ The raw CTD casts are located in a folder at: \path{\\maddie\TaylorF\from_Samwis
 
 The data at this point is still raw, and needs further quality control. This is done with the script \path{CTD_QC.m}, which imports the data structure, flags bad casts, searches for downcast portion of good casts, averages downcast data over 0.2m bins, and allows user to manually remove bad data points. Quality controlled data is stored as \path{QC_downcast.mat}. 
 
-The next step is to identify casts as either well mixed or have some evidence of stratification, suggesting a barrier to mixing. At first, I thought I could do this using the Brunt-Vaisala frequency as an indicator, but this seems to take into account local gradients, that may or may not be indicative of true layers. (Maybe this works better for deeper water columns or coarser CTD resolution? not sure...) At any rate, Al Pludderman (from PO department) pointed me to some well-established metrics of defining a mixed layer based on changes in density or temperature from a surface reference value. In short, choose a surface reference value that you trust (CTD data within the first few meters can be unreliable), and from this value, find the depth at which density or temperature has increased or decreased past a threshold value. Some papers that look into this are Kara et al. (2000) and Brainerd and Gregg (1995), the latter which looks into how mixed layer depth metrics actually correspond to mixing.
+The next step is to identify casts as either well mixed or have some evidence of stratification, suggesting a barrier to mixing. At first, I thought I could do this using the Brunt-Vaisala frequency as an indicator, but this seems to take into account local gradients, that may or may not be indicative of true layers. (maybe this works better for deeper water columns or coarser CTD resolution? not sure...) At any rate, Al Pludderman (from PO department) pointed me to some well-established metrics of defining a mixed layer based on changes in density or temperature from a surface reference value. In short, choose a surface reference value that you trust (CTD data within the first few meters can be unreliable), and from this value, find the depth at which density or temperature has increased or decreased past a threshold value. Some papers that look into this are Kara et al. (2000) and Brainerd and Gregg (1995), the latter looks into how mixed layer depth metrics actually correspond to mixing.
 
 Turns out that finding the depth at which density crosses a fixed threshold ($\Delta$) from a surface reference does a pretty good job of identifying a mixed layer. Threshold values can vary, based on season or location, but for MVCO, around $\Delta0.2$ kg/m$^3$ for density seems to do a good job. The casts taken around MVCO seem to fall into one of four types:
 
 \begin{itemize}
 
 \item well mixed: water column is homogeneous
-\item surface level: strong stratification at the surface (typically $<$ 3 or 4 m) either from fresh water or daily warming, with layer underneath well mixed and uniform to bottom
+\item surface stratification: strong stratification at the surface (typically $<$ 3 or 4 m) either from fresh water or daily warming, with layer underneath well mixed and uniform to bottom
 \item mid-layers: mixed layer from surface (or under surface layer) until pycnocline appears at middle depths 
 \item stratification through-out: whole water column is a pycnocline!
 \end{itemize}
@@ -170,9 +214,26 @@ For the second question, we find that a majority of hours during a day seems to 
 \caption{Bar graph showing how many days found in a given week (over the entire time series) had a certain percentage of daylight hours consideder `stratifed' based on the $\Delta0.6 ^{\circ}$C proxy. The low number at the end of the year is for leap year days.}
 \end{figure}
 
-So...in general, one can safely assume that you are dealing with a mixed water column. Now, for the light levels, we could try two values: one at 4m (assuming slow mixing) and then one with the light integrated over depth (assuming fast mixing) and see what those values look like?
-%\subsection{}
+\clearpage
+\section{Application of k to incident light}
 
+Now safely assuming that we have a well mixed water column, we can calculate an average light environment with \path{apply_k_to_incident_light.m} by assuming the cells pass through the entire water column in a day. Assuming simple exponential attenuation, we have:
+
+\begin{equation}
+\bar{E_d}(t) = \frac{1}{15} \int_{15}^{0} \bar{E_0}(t) \cdot \exp(\bar{K_d}(t) \cdot z)~dz,
+\end{equation}
+
+\noindent where $\bar{E_0}(t)$ is the climatological value of incident radiation on year day $t$, $\bar{K_d}(t)$ is the interpolated $K_d$ value, and $\bar{E_d}(t)$ is the resulting average light level. Here, 15 refers to the average height in meters of the water column at MVCO.
+This calculation can be performed analytically and comes out to:
+
+\begin{equation}
+\bar{E_d}(t) = \frac{\bar{E_0}(t)}{15 \cdot \bar{K_d}(t)} \left[ 1 - \exp(15 \cdot \bar{K_d}(t)) \right]
+\end{equation}
+
+\noindent This script saves the interpolated k's and light at depth products in \path{k_interp.mat} in the repository.
 
 
 \end{document}  
+
+
+
