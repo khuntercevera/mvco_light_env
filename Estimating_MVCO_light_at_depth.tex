@@ -43,7 +43,7 @@ Our goal is to estimate the light intensity (and possible quality) at 4 m depth 
 \end{table}
 
 \subsection{raw files to text readables}
-The files that are generated from the HyperPro radiometer have a `~.raw' extension. The `~.raw' files contain all the unconverted measurements from all the sensors incorporated into the HyperPro. For our purposes, we're really only concerned with the measurements from the MPR (depth sensor), 284 (downwelling irradiance), and 285 (solar reference). Pitch, angle, roll, upwelling irradiance, and more, are also measured by the HyperPro, but those will be excluded for now. To convert the raw files into a readable text file, we need the calibration data for each sensor and the program SatCon, which applies the conversion from the calibration files. This can all be done in matlab with the script: \path{processPROII_MVCO.m}. The program SatCon (as long as available in the path) is called directly from within matlab. This script does the conversion to a text file output, and then imports the textfile to make matlab files with useful raw and processed variables. The raw files can be found in : \path{\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\raw_data\}. In this folder, each day's measurements and casts are contained in a folder labelled by the date. The processed .txt and .mat files are stored in a similar file structure to the one found in \url{raw_data}, where each day has it's own folder at \url{\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\processed_radiometer_files}. In each day folder there are \url{converted_txtfiles} and \url{mat_outfiles} folders, the latter contains .mat files for each individual casts as well as .mat files that have data and products for all the casts for that day.
+The files that are generated from the HyperPro radiometer have a `~.raw' extension. The `~.raw' files contain all the unconverted measurements from all the sensors incorporated into the HyperPro. For our purposes, we're really only concerned with the measurements from the MPR (depth sensor), 284 (downwelling irradiance), and 285 (solar reference). Pitch, angle, roll, upwelling irradiance, and more, are also measured by the HyperPro, but those will be excluded for now. To convert the raw files into a readable text file, we need the calibration data for each sensor and the program SatCon, which applies the conversion from the calibration files. This can all be done in matlab with the script: \path{processPROII_MVCO.m}. The program SatCon (as long as available in the path) is called directly from within matlab. This script does the conversion to a text file output, and then imports the textfile to make matlab files with useful raw and processed variables. The raw files can be found in : \path{\\sosiknas1\lab_data\mvco\HyperPro_Radiometer\raw_data\}. In this folder, each day's measurements and casts are contained in a folder labelled by the date. The processed .txt and .mat files are stored in a similar file structure to the one found in \url{raw_data}, where each day has it's own folder at \url{\\sosiknas1\lab_data\MVCO\HyperPro_Radiometer\processed_radiometer_files}. In each day folder there are \url{converted_txtfiles} and \url{mat_outfiles} folders, the latter contains .mat files for each individual casts as well as .mat files that have data and products for all the casts for that day.
 
 For each of the light sensors there are corresponding dark measurements - these are necessary because temperature of the sensor can affect the measurement. This is corrected using the dark measurements. In \path{processPROII_MVCO.m}, the nearest dark measurement in time is simply subtracted from the light measurement. PAR is calculated as the integral over wavelengths 400 - 700 nm. The light measurements are then time-synced to the MPR sensor, which has more frequent measurements. Some plots for sanity-checks are also produced if the plotflag is changed to one. If it hasn't been created, the script will prompt the user for a quality comment on each cast, such as `not a cast' or `good cast'. This information is used later down the line for screening of files to use in calculation of attenuation coefficients.
 
@@ -139,23 +139,8 @@ Another script \path{wavelength.m} looks at the distribution of energy in differ
 \caption{A) and B) showing wavelength profiles at 4m just from different views. Color coded by yearday. C) Wavelength at depth with maximum intensity.}
 \end{figure}
 
-
+\newpage
 \section{Evaluating water column stratification}
-
-Scripts used in this process:
-
-\begin{table}[h]
-\begin{center}
-\begin{tabular}{ | l  | p{6cm} | p{3cm} | } 
-    \hline
-    script & description & specific products \\  \hline
-\path{ctd_raw2cnv_processing.m} & script that process raw CTD data (either .hex or .dat files) into readable .cnv files via Sea-Bird SBE Data (note: script should be run on a machine that has this software installed). & \\ \hline
-\path{import_ctd_casts.m} &  imports processed CTD data (.cnv files) into a structure storage array (calls \path{import_cnv.m}) & \\ \hline
-\path{import_cnv.m} &  imports .cnv file into matlab variables & \\ \hline
-\end{tabular}
-\end{center}
-\end{table}
-\clearpage
 
 So, now that we have a rough idea of the light level at certain times of year, we can add another layer of information to guide our estimate. And that is trying to gauge how cells might be mixing within the water column. Typically, MVCO is well mixed, being so shallow, but stratification does happen, particularly in the summer months, and we'd like to be able to say if cells are seeing all of the water column (and light levels) or just part of it (and higher or lower light levels). Density data requires temperature, salinity and depth to calculate, but we only have some of these variables at two depths (4m at beam, 12m at node) over time, making it difficult to estimate what the entire structure of the water column would look like. Furthermore, salinity data at some time points is unreliable, making density estimates unavailable.
 
@@ -165,11 +150,24 @@ One idea is to use the temperature difference between the 4m tower beam and 12m 
 
 The raw CTD casts are located in a folder at: \path{\\maddie\TaylorF\from_Samwise\data\MVCO\}, and in order to keep processing consistent, these raw casts are processed with matlab scripts, rather than using the Seabird software (where it might be ambiguous as to what averaging / quality control is happening). The scripts that do the processing are as follows:
 
-\noindent The .cnv (text readable) files have been temporarily stored in: \path{\\sosiknas1\Lab\data\MVCO\processed_CTD_casts\}
+Scripts used in this process:
 
-%'\textbackslash \textbackslash sosiknas1\textbackslash Lab\_data\textbackslash MVCO\textbackslash processed\_CTD\_casts\textbackslash`
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{ | l  | p{6cm} | p{4cm} | } 
+    \hline
+    script & description & specific products \\  \hline
+\path{ctd_raw2cnv_processing.m} & script that process raw CTD data (either .hex or .dat files) into readable .cnv files via Sea-Bird SBE Data (note: script should be run on a machine that has this software installed). & \\ \hline
+\path{import_ctd_casts.m} &  imports processed CTD data (.cnv files) into a structure storage array (calls \path{import_cnv.m}) & \\ \hline
+\path{import_cnv.m} &  imports .cnv file into matlab variables & \\ \hline
+\path{CTD_QC.m} &  quality control processing of CTD casts & \path{QC_downcast.mat} \\ \hline
+\path{find_mixed_layer_depth.m} &  calculates when potential density crossed threshold values in water column & \path{mld.mat} \\ \hline
+\path{examine_tempdate_hourly.m} & examine beam and node temperature records with stratification index & \path{temp_hourly_beam_node.mat}\\ \hline
+\end{tabular}
+\end{center}
+\end{table}
 
-The data at this point is still raw, and needs further quality control. This is done with the script \path{CTD_QC.m}, which imports the data structure, flags bad casts, searches for downcast portion of good casts, averages downcast data over 0.2m bins, and allows user to manually remove bad data points. Quality controlled data is stored as \path{QC_downcast.mat}. 
+They are located in the \path{/NES-LTER/ctd_processing}. The .cnv (text readable) files have been temporarily stored in: \path{\\sosiknas1\Lab\data\MVCO\processed_CTD_casts\}. The data at this point is still raw, and needs further quality control. This is done with the script \path{CTD_QC.m}, which imports the data structure, flags bad casts, searches for downcast portion of good casts, averages downcast data over 0.2m bins, and allows user to manually remove bad data points. Quality controlled data is stored as \path{QC_downcast.mat} in \path{\\sosiknas1\lab_data\MVCO\processed_CTD_casts\}. 
 
 The next step is to identify casts as either well mixed or have some evidence of stratification, suggesting a barrier to mixing. At first, I thought I could do this using the Brunt-Vaisala frequency as an indicator, but this seems to take into account local gradients, that may or may not be indicative of true layers. (maybe this works better for deeper water columns or coarser CTD resolution? not sure...) At any rate, Al Pludderman (from PO department) pointed me to some well-established metrics of defining a mixed layer based on changes in density or temperature from a surface reference value. In short, choose a surface reference value that you trust (CTD data within the first few meters can be unreliable), and from this value, find the depth at which density or temperature has increased or decreased past a threshold value. Some papers that look into this are Kara et al. (2000) and Brainerd and Gregg (1995), the latter looks into how mixed layer depth metrics actually correspond to mixing.
 
@@ -183,9 +181,9 @@ Turns out that finding the depth at which density crosses a fixed threshold ($\D
 \item stratification through-out: whole water column is a pycnocline!
 \end{itemize}
 
-Most of the casts available (104 at present, but only 72 unique days) were well mixed, and from looking at the casts taken on the same day, the water column can change quite rapidly (indicating possible daily stratification and break down, which would be normal for a site at this shallow depth). 
+Most of the casts available (104 at present, but only 72 unique days) were well mixed, and from looking at the casts taken on the same day, the water column can change quite rapidly (indicating possible daily stratification and break down, which would be normal for a site at this shallow depth). This processing was done with \path{find_mixed_layer_depth.m}, a messy script, which categorizes when different thresholds were crossed at which depth. This is saved in \path{mld.mat}.
 
- The  goal though is to evaluate how differences in these two measurements may serve as a proxy for temperature or density across the water column. So we can calculate the change in temperature or density from 4m and 12m in the cast and see how well this relates to the classification of the water column (which used the whole profile). In general, this is not bad (although a change in density and temperature will miss cases where there is just surface stratification). We also find that, in general, a change in temperature strongly correlates to change in density, lending support to using just temperature as a proxy for density:
+ The goal though is to evaluate how well temperature differences can serve as proxy for density differences (which in turn says something about the water column structure). We calculate the change in temperature and density from 4m and 12m in the cast and see how well this relates to the classification of the water column (which used the whole profile). In general, this is not bad (although a change in density and temperature will miss cases where there is just surface stratification). We also find that, in general, a change in temperature strongly correlates to change in density, lending support to using just temperature as a proxy for density:
 
  \begin{figure}[h]
 \centering
@@ -193,10 +191,10 @@ Most of the casts available (104 at present, but only 72 unique days) were well 
 \caption{A) and B) shows relationship between the difference in potential density at 4 and 12 m and the difference in temperature for those two depths, recorded in the CTD cast. B) is color-coded based on stratification classification.}
 \end{figure}
 
+\clearpage
+\noindent A $\Delta0.2$ in density corresponds to around $\sim0.68 ^{\circ}$C temperature change (based on the linear regression curve in Fig. 4B, although, one could calculate this based on equation of state of seawater...). Using this as a cutoff, we can now look over the entire timeseries of beam (4 m ) and node (12 m) temperature records to get an idea of seasonal stratification! Woo!
 
-\noindent A $\Delta0.2$ in density corresponds to around $\sim0.65 ^{\circ}$C temperature change (based on the linear regression curve in Fig. 4B, although, one could calculate this based on equation of state of seawater...). Using this as a cutoff (or even slightly more lenient cutoff of $\sim0.6 ^{\circ}$C), we can now look over the entire timeseries of beam (4 m ) and node (12 m) temperature records to get an idea of seasonal stratification! Woo!
-
-Looking at the daily averaged temperature records for the beam and node is not quite enough, as this average can be misleading by aggregating over day and night. Instead, we look at hourly time points to see 1) how the water column can change over the day and 2) see how many hours of the daylight portion would be considered 'stratified'. These actions are done with the script \path{examine_tempdate_hourly.m}.
+Looking at the daily averaged temperature records for the beam and node is not enough, as this average can be misleading by aggregating over day and night. Instead, we look at hourly time points to see 1) how the water column can change over the day and 2) see how many hours of the daylight portion would be considered `stratified'. These actions are done with the script \path{examine_tempdate_hourly.m}.
 
 It seems that the change in temperature over a day can vary quite a bit (up to a few degrees for both beam and node temperature records). The maximim difference between these two records for a given hour shows a curious seasonality, with the largest differences observed in winter and summer:
 
@@ -206,11 +204,11 @@ It seems that the change in temperature over a day can vary quite a bit (up to a
 \caption{Hourly difference in temperature between 4 and 12 plotted against yearday for that hour.}
 \end{figure}
 
-For the second question, we find that a majority of hours during a day seems to be well mixed. With the exemption of days in summer and in winter, very few days would be stratified as to limit cell movement within the water column (although we still have no idea of how fast these cells would be mixing...).  Figure 6 illustrates this by showing a weekly bin bar graph of days available for that week and how many days had what percentage of their hours `stratified' as based on the $\Delta0.6 ^{\circ}$C proxy.
+We find that a majority of hours during a day seems to be well mixed. With the exemption of days in summer and in winter, very few days would be stratified as to limit cell movement within the water column (although we still have no idea of how fast these cells would be mixing...).  Figure 6 illustrates this by showing a weekly bin bar graph of days available for that week and how many days had what percentage of their hours `stratified' as based on the $\Delta0.68 ^{\circ}$C proxy. A day is considered stratified if more than 2/3 of its daylight hours had a temperature difference that exceeded 0.68 $^{\circ}$C. This comes out to about \%97 of the days being stratified!
 
  \begin{figure}[h]
 \centering
-\includegraphics[width=\textwidth]{figures_for_tex_doc/percentage_hours_stratified.pdf}
+\includegraphics[width=\textwidth]{figures_for_tex_doc/percentage_hours_stratified_day.pdf}
 \caption{Bar graph showing how many days found in a given week (over the entire time series) had a certain percentage of daylight hours consideder `stratifed' based on the $\Delta0.6 ^{\circ}$C proxy. The low number at the end of the year is for leap year days.}
 \end{figure}
 

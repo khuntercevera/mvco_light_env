@@ -18,7 +18,7 @@ mdate = [mdate; CTDsmooth(:,1)];
 T = [T; CTDsmooth(:,2)];
 
 % transition to moxanode
-for ii = 7:17
+for ii = 7:18
     eval(['load /Volumes/Lab_data/MVCO/MVCO_Moxanode/code/CTDsmoothhr20' num2str(ii,'%02d')]);
     mdate = [mdate; CTDsmooth(:,1)];
     T = [T; CTDsmooth(:,2)];
@@ -46,7 +46,7 @@ load([datadir 'other2014'])
 load([datadir 'other2015'])
 load([datadir 'other2016'])
 load([datadir 'other2017'])
-
+load([datadir 'other2018'])
 %this will lead to averaging of seacat and node temps for overlap days
 yd_ocn2003 = [yd_ocn2003; yd_seacat2003];
 Temp2003 = [Temp2003; temp_seacat2003];
@@ -57,7 +57,7 @@ Temp2004 = [Temp2004; temp_seacat2004];
 %% okay, so now that have raw data loaded, ask:
 %difference within a day?
 %temperature difference within a day?
-year=2001:2017;
+year=2001:2018;
 
 mdate_node=[]; Tnode=[];
 for count = 1:length(year),
@@ -70,7 +70,7 @@ end;
 %% find the hourly value for each year:
 
 %this takes awhile! ~30 min!!!
-yearlist=2003:2017;
+yearlist=2003:2018;
 
 Tbeam_hour=nan(366*24*length(yearlist),1);
 Tnode_hour=nan(366*24*length(yearlist),1);
@@ -257,7 +257,7 @@ total_Solar=[];
 solar_time=[];
 total_dawn=[];
 
-for year=2003:2017
+for year=2003:2018
     
     switch year
         case 2003
@@ -335,7 +335,7 @@ for q=1:length(unqdays)
     delta=delta(~isnan(delta));
         
     if ~isempty(delta) %meaning some real values:
-        jj=find(delta >= 0.6); %over 0.6 looks like stratification
+        jj=find(delta >= 0.68); %over 0.68 looks like stratification
         if ~isempty(delta)
             above_06(q,1:2)=[length(jj) length(delta)];
         else
@@ -384,6 +384,11 @@ for j=1:366
     rec(j,12)=sum(rec(j,1:11));
 end
 
+%% total days that would be considered stratified:
+
+days_to_use=find(above_06(:,2)./above_06(:,3) > 0.8   &  ~isnan(above_06(:,2))); %yeilds 3090 as of 2018
+jj=find(above_06(days_to_use,1)./above_06(days_to_use,2) > 0.6);
+size(jj)./length(days_to_use) %gives about 3% of days that would be considered stratified...
 %%
 
 %custom colormap:
@@ -423,13 +428,3 @@ addpath /Users/kristenhunter-cevera/Documents/MATLAB/matlab_tools/export_fig_201
 
 export_fig /Users/kristenhunter-cevera/MVCO_light_at_depth/figures_for_tex_doc/percentage_hours_stratified_day.pdf
 export_fig /Users/kristenhunter-cevera/seasons_of_syn_paper/tex_files/figures/percentage_hours_stratified_day.pdf
-%% see how many days would have some type of stratification in the
-clf
-plot(find_yearday(unqdays),above_06(:,2),'.')
-hold on
-plot(find_yearday(unqdays),above_06(:,1),'.')
-
-%% at any rate, it's a low percentage of days that have more than 2/3 possibly stratified:
-kk=find(above_06(:,2)./above_06(:,3) > 0.6); %2/3 days
-jj=find(above_06(kk,1)./above_06(kk,2) > 0.5); %of those days, how many hours are stratified?
-length(jj)./length(kk)
