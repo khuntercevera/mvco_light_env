@@ -17,7 +17,7 @@
 \maketitle
 \section{Overview}
 
-Our goal is to estimate the light intensity (and possible quality) at 4 m depth at MVCO to relate division rates of \textit{Synechococcus} to the in situ light environment (rather than the incident light) as best we can. This is involves quite a few different measurements and quite a few different assumptions for an estimation. At the moment, we're construction an estimate from:
+Our goal is to estimate the light intensity (and possible quality) at 4 m depth at MVCO to relate division rates of \textit{Synechococcus} to the in situ light environment (rather than the incident light) as best we can. This nvolves quite a few different measurements and quite a few different assumptions for an estimation. At the moment, we're construction an estimate from:
 \begin{itemize}\item time series of incident solar radiation
 \item attenuation coefficients from available radiometer\item estimation of stratification at MVCO from continuous temperature records at two depths.
 \end{itemize}
@@ -120,7 +120,7 @@ To calculate k for each wavelength, this is done with \path{wavelength_attentuat
 
 \subsection{Relationships with k}
 
-The script \path{k_relationships.m} aggregates and organizes the k$_{PAR}$ values over all the casts for use downstream (i.e. to calculate climatology of light at depth). It also gives some nice overview plots of where we have data for, which data we're using near the tower, and what k looks like over time. This script also imports chlorophyll data, matches k-values by date and then tries to make some relationships. Overall, things aren't terrible between k and chl, although this relationship does differ from Morel 1988 or Morel \& Maritorena 2001. While there may be decent relationship between chl and k, we only have chl values for specific dates. One way around this is to use fluorometer data as a proxy for chl and make a model from that to use in a yearday k-model. This was more in-depth than we had time for at the moment, but would be cool to explore in the future!
+The script \path{k_relationships.m} aggregates and organizes the k$_{PAR}$ values over all the casts for use downstream (i.e. to calculate climatology of light at depth). It also gives some nice overview plots of where we have data for, which data we're using near the tower, and what k looks like over time. This script also imports chlorophyll data, matches k-values by date and then tries to make some relationships. Overall, things aren't terrible between k and chl, although this relationship does differ from Morel 1988 or Morel \& Maritorena 2001. While there may be decent relationship between chl and k, we only have chl values for specific dates. One way around this is to use fluorometer data as a proxy for chl and make a model from that to use in a yearday k-model. This was more in-depth than we had time for, but would be cool to explore in the future!
 
  
  \begin{figure}[h]
@@ -150,8 +150,6 @@ One idea is to use the temperature difference between the 4m tower beam and 12m 
 
 The raw CTD casts are located in a folder at: \path{\\maddie\TaylorF\from_Samwise\data\MVCO\}, and in order to keep processing consistent, these raw casts are processed with matlab scripts, rather than using the Seabird software (where it might be ambiguous as to what averaging / quality control is happening). The scripts that do the processing are as follows:
 
-Scripts used in this process:
-
 \begin{table}[h]
 \begin{center}
 \begin{tabular}{ | l  | p{6cm} | p{4cm} | } 
@@ -167,11 +165,11 @@ Scripts used in this process:
 \end{center}
 \end{table}
 
-They are located in the \path{/NES-LTER/ctd_processing}. The .cnv (text readable) files have been temporarily stored in: \path{\\sosiknas1\Lab\data\MVCO\processed_CTD_casts\}. The data at this point is still raw, and needs further quality control. This is done with the script \path{CTD_QC.m}, which imports the data structure, flags bad casts, searches for downcast portion of good casts, averages downcast data over 0.2m bins, and allows user to manually remove bad data points. Quality controlled data is stored as \path{QC_downcast.mat} in \path{\\sosiknas1\lab_data\MVCO\processed_CTD_casts\}. 
+The first 3 scripts are located in the \path{/NES-LTER/ctd_processing}. The .cnv (text readable) files have been temporarily stored in: \path{\\sosiknas1\Lab\data\MVCO\processed_CTD_casts\}. The data at this point is still raw, and needs further quality control. This is done with the script \path{CTD_QC.m}, which imports the data structure, flags bad casts, searches for downcast portion of good casts, averages downcast data over 0.2m bins, and allows user to manually remove bad data points. Quality controlled data is stored as \path{QC_downcast.mat} in \path{\\sosiknas1\lab_data\MVCO\processed_CTD_casts\}. 
 
 The next step is to identify casts as either well mixed or have some evidence of stratification, suggesting a barrier to mixing. At first, I thought I could do this using the Brunt-Vaisala frequency as an indicator, but this seems to take into account local gradients, that may or may not be indicative of true layers. (maybe this works better for deeper water columns or coarser CTD resolution? not sure...) At any rate, Al Pludderman (from PO department) pointed me to some well-established metrics of defining a mixed layer based on changes in density or temperature from a surface reference value. In short, choose a surface reference value that you trust (CTD data within the first few meters can be unreliable), and from this value, find the depth at which density or temperature has increased or decreased past a threshold value. Some papers that look into this are Kara et al. (2000) and Brainerd and Gregg (1995), the latter looks into how mixed layer depth metrics actually correspond to mixing.
 
-Turns out that finding the depth at which density crosses a fixed threshold ($\Delta$) from a surface reference does a pretty good job of identifying a mixed layer. Threshold values can vary, based on season or location, but for MVCO, around $\Delta0.2$ kg/m$^3$ for density seems to do a good job. The casts taken around MVCO seem to fall into one of four types:
+Turns out that finding the depth at which density crosses a fixed threshold ($\Delta$) from a surface reference does a pretty good job of identifying a mixed layer. Threshold values can vary, based on season or location, but for MVCO, around $\Delta0.2$ kg/m$^3$ for density seems to be it. The casts taken around MVCO seem to fall into one of four types:
 
 \begin{itemize}
 
@@ -204,12 +202,12 @@ It seems that the change in temperature over a day can vary quite a bit (up to a
 \caption{Hourly difference in temperature between 4 and 12 plotted against yearday for that hour.}
 \end{figure}
 
-We find that a majority of hours during a day seems to be well mixed. With the exemption of days in summer and in winter, very few days would be stratified as to limit cell movement within the water column (although we still have no idea of how fast these cells would be mixing...).  Figure 6 illustrates this by showing a weekly bin bar graph of days available for that week and how many days had what percentage of their hours `stratified' as based on the $\Delta0.68 ^{\circ}$C proxy. A day is considered stratified if more than 2/3 of its daylight hours had a temperature difference that exceeded 0.68 $^{\circ}$C. This comes out to about \%97 of the days being stratified!
+We find that a majority of hours during a day seems to be well mixed. With the exception of days in summer and in winter, very few days would be stratified as to limit cell movement within the water column (although we still have no idea of how fast these cells would be mixing...).  Figure 6 illustrates this by showing a frequency bar graph of days in the dataset that had a certain percentage of their hours `stratified' as based on the $\Delta0.68 ^{\circ}$C proxy. A day is considered stratified if more than 2/3 of its daylight hours had a temperature difference that exceeded 0.68 $^{\circ}$C. This comes out to about \%97 of the days being stratified!
 
  \begin{figure}[h]
 \centering
 \includegraphics[width=\textwidth]{figures_for_tex_doc/percentage_hours_stratified_day.pdf}
-\caption{Bar graph showing how many days found in a given week (over the entire time series) had a certain percentage of daylight hours consideder `stratifed' based on the $\Delta0.6 ^{\circ}$C proxy. The low number at the end of the year is for leap year days.}
+\caption{Bar graph showing how many days  (over the entire time series) had a certain percentage of daylight hours considered `stratifed' based on the $\Delta0.68 ^{\circ}$C proxy. The low number at the end of the year is for leap year days.}
 \end{figure}
 
 \clearpage
