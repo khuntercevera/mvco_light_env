@@ -1,8 +1,7 @@
 % processPROII_MVCO
-% Core pieces of this script that call the SatCon software were provided by Sam Laney at WHOI. Please
-% contact him for further use of this code
+% Core pieces of this script that call the SatCon software were provided by Sam Laney at WHOI. 
 % Other pieces, specific to MVCO processing, dark measurement subtraction,
-% PAR calculation were contriuted by KRHC 
+% PAR calculation were contributed by KRHC 
 % Script imports and processes data from 3 sensors on HyperPro, saves intermediate txt files
 
 
@@ -92,25 +91,17 @@ for foldernum = 1:length(datafolders)
     end
     
     
-    % the plan:
-    % loop through all the fnum *.raw files in that directory
-    % each time:
-    % -> convert raw into .txt file using MPR cal file
-    % -> read in that .txt file and convert to matlab variables
-    % -> convert raw into .txt using 284 (downwelling irrad) cal file
-    % -> read into .txt and convert into other matlab variables
-    % -> repeat for 285 (solar reference)
-    % make some informative plots and flag bad data
-    % save all matlab vars that you care about into mat file names as input raw file
+    % for each *.raw files in a directory and for each sensor that needs to
+    % be imported:
+    % 
+    % convert raw into .txt file using appropriate cal file
+    % read in that .txt file and convert to desired matlab variables
+    % repeat for remaining sensors
     
+    %below, we convert data from MPR (depth, time), 284 (downwelling irrad)
+    % and 285 (solar reference)
     
-    % now using satcon 1.5.5_2 NEW SWTCHES
-    % HELPFUL TO READ THE MANUAL!
-    % xtra output info, convert phys vals + immersion, proc time tags & format,
-    % precision 4
-    % buffersize 32768, overwrite old files, kill end window, no conversion log
-    
-    %satconswitches = ' /x /ci /tf /p10 /OverWrite=yes /EW=y /cl=nul';
+    %From the SatCon Manual v1.5, pages 10-15: 
     
     %Conversion switches:
     %/x extra output heading (info about conversion, which file used, immersion-corrected, etc.)
@@ -124,9 +115,8 @@ for foldernum = 1:length(datafolders)
     %/EW (EndWindow): Close conversion progress window after completed conversion
     %/CL (Conversion log)=nul: do not maintain a conversion log
     
-    numfiles = length(sourcefiles);
     
-    for filenum = 1:numfiles
+    for filenum = 1:length(sourcefiles)
         
         filename=sourcefiles(filenum).name;
         
@@ -136,44 +126,44 @@ for foldernum = 1:length(datafolders)
         fprintf('Processing %s into text into matlab files\n', sourcefiles(filenum).name);
         empty_flag=0;
         
-        for ftype = 1:5,
+        for sensortype = 1:5,
             
-            switch ftype
+            switch sensortype
                 
                 case 1 %MPR sensor (depth, temperature, etc.)
                     calfilestr = [calfiledir '\MPR106a.cal'];
                     txtfile = fullfile(txtoutdir,[sourcefiles(filenum).name(1:end-4) '-MPR.txt']);
                     satconswitches = ' /x /c /tf /p10 /OverWrite=yes /EW=y /cl=nul';
-                    varstub ='mpr';
+                    sensor ='mpr';
                     
                 case 2 %Solar standard, light measurments
                     calfilestr = [calfiledir '\Hse285c.cal'];
                     txtfile = fullfile(txtoutdir,[sourcefiles(filenum).name(1:end-4) '-ESTDL.txt']);
                     satconswitches = ' /x /c /tf /p10 /OverWrite=yes /EW=y /cl=nul';
-                    varstub = 'esl';
+                    sensor = 'esl';
                     
                 case 3 %Solar standard, dark measurments
                     calfilestr = [calfiledir '\HED285c.cal'];
                     txtfile = fullfile(txtoutdir,[sourcefiles(filenum).name(1:end-4) '-ESTDD.txt']);
                     satconswitches = ' /x /c /tf /p10 /OverWrite=yes /EW=y /cl=nul';
-                    varstub = 'esd';
+                    sensor = 'esd';
                     
                 case 4 %Downwelling radiation, light measurments
                     calfilestr = [calfiledir '\HPE284c.cal'];
                     txtfile = fullfile(txtoutdir,[sourcefiles(filenum).name(1:end-4) '-EDOWNL.txt']);
                     satconswitches = ' /x /ci /tf /p10 /OverWrite=yes /EW=y /cl=nul'; %want immersion corrected
-                    varstub = 'edl';
+                    sensor = 'edl';
                     
                 case 5 %Downwelling radiation, dark measurments
                     calfilestr = [calfiledir '\PED284c.cal'];
                     txtfile = fullfile(txtoutdir,[sourcefiles(filenum).name(1:end-4) '-EDOWND.txt']);
                     satconswitches = ' /x /ci /tf /p10 /OverWrite=yes /EW=y /cl=nul'; %want immersion corrected
-                    varstub = 'edd';
+                    sensor = 'edd';
                     
                 otherwise
                     fprintf('Error in switch\n');
                     fclose all;
-                    return;
+                return;
                     
             end;
             
@@ -181,38 +171,43 @@ for foldernum = 1:length(datafolders)
             % need to satcon these data into temp files -----------------------------------------------------------
             %fnamestr = ['"C:\Program Files (x86)\Satlantic\SatCon\SatCon.exe" ' infile ' ' txtfile ' ' calfilestr];
             if do_satcon==1
-                fnamestr = ['"C:\Program Files (x86)\Satlantic\SatCon\SatCon.exe" ' infile ' ' txtfile ' ' calfilestr];
-                cmdstr = [fnamestr satconswitches];
-                [s,w] = system(cmdstr);
+                cmdstr = ['"C:\Program Files (x86)\Satlantic\SatCon\SatCon.exe" ' infile ' ' txtfile ' ' calfilestr satconswitches];       
+                [s,w] = system(cmdstr); %have matlab call the function
             end
             
             
             % ----------------REIMPORT DATA FROM TXT FILES ----------------------------------------------------
             
             %Once have made the txt files, reimport to matlab to save as .mat files:
-            fprintf('reading in %s data\n', varstub);
+            fprintf('reading in %s data\n', sensor);
             
             %could in theory find the formatSpec once for .txt import .... but doesn't look too taxing at the moment...
             
+            %in the txtfiles, there are usually two header lines until you
+            %get to the data columns, find this and then record the line
+            %number and number of columns:
+            
             %find out how many columns you have in the file:
             fid = fopen(txtfile);
-            line = fgetl(fid); k=1;
-            while ~strcmp(line,'')   %look for this space between header lines and column labels
+            line = fgetl(fid); row=1;
+            while isempty(strfind(line,'Index'))   %look for this key word - this denotes the line that has the column headers
                 line = fgetl(fid);
-                k=k+1;
+                row=row+1;
             end
-            line = fgetl(fid);
+            %line = fgetl(fid);
             fclose(fid);
+            row=row-1; %important - textscan doesn't seem to recognize an empty line with the below formatpsec
             
-            tmp = textscan(line, '%s'); %returns cell array
-            n = length(tmp{:}); %number of columns
+%           tmp = textscan(line, '%s'); %returns cell array
+%           n = length(tmp{:}); %number of columns
+            n = length(strsplit(line,'\t')); %number of columns
             
             %textscan magic:
             %first gather column header info
             fileID = fopen(txtfile,'r');
             formatSpec=repmat('%s',1,n);
-            textscan(fileID, '%[^\n\r]', k-1, 'ReturnOnError', false); %throw away until row 3
-            column_headers = textscan(fileID, formatSpec, (k+1)-k+1, 'Delimiter', '\t', 'ReturnOnError', false);
+            textscan(fileID, '%[^\n\r]', row-1, 'ReturnOnError', false); %reads in lines, 2 times, throw away until row 3
+            column_headers = textscan(fileID, formatSpec, 2, 'Delimiter', '\t', 'ReturnOnError', false); %should be at column line, read in twice for column title and units
             
             %reshuffle header info:
             column_headers=cat(2,column_headers{:})';
@@ -253,8 +248,8 @@ for foldernum = 1:length(datafolders)
                 fprintf('This file seems to have no data in it....\n')
             end
             
-            eval([varstub '_data=dataArray;'])
-            eval([varstub '_hdr=column_headers;'])
+            eval([sensor '_data=dataArray;'])
+            eval([sensor '_hdr=column_headers;'])
             
             clear dataArray column_headers txtfile
             
@@ -328,20 +323,20 @@ for foldernum = 1:length(datafolders)
         %Wavelength processing: pull out the light data into a matrix for
         %easier processing:
         
-        varstubs={'mpr','edl','edd','esl','esd'};
+        sensors={'mpr','edl','edd','esl','esd'};
         
         if empty_flag==0
             for q=2:5;
-                eval(['hdr=' varstubs{q} '_hdr;'])
+                eval(['hdr=' sensors{q} '_hdr;'])
                 temp=regexp(hdr,'\d{3}\.\d{2}','match');
                 ind=find(cellfun('isempty',temp)==0);
                 temp=temp(ind);
                 temp=[temp{:}]';
                 
-                eval([varstubs{q} '_lambdas=str2num(char(temp));'])
+                eval([sensors{q} '_lambdas=str2num(char(temp));'])
                 
                 %extract just the wavelength measurments:
-                eval([varstubs{q} '_wv_data=cell2mat(' varstubs{q} '_data(:,ind));'])
+                eval([sensors{q} '_wv_data=cell2mat(' sensors{q} '_data(:,ind));'])
             end
             
             %Check that all wavelengths are the same!
