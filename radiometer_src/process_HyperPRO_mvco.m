@@ -1,8 +1,9 @@
-% processPROII_MVCO
-% Core pieces of this script that call the SatCon software were provided by Sam Laney at WHOI. 
+% process_HyperPRO_mvco
+% Pieces of this script that call the SatCon software were originally provided by Sam Laney at WHOI. 
 % Other pieces, specific to MVCO processing, dark measurement subtraction,
 % PAR calculation were contributed by KRHC 
-% Script imports and processes data from 3 sensors on HyperPro, saves intermediate txt files
+% Script imports and processes data from 3 sensors on HyperPro, saves
+% intermediate txt files, exports MATLAB variables
 
 
 %addpath /Users/kristenhunter-cevera/Documents/MATLAB/mvco_tools/
