@@ -17,7 +17,7 @@ load(fullfile(sourcepath,'good_data_folders.mat'))
 
 %% right now, manually entered, but can put into a for loop
 
-foldernum=good_data(15);
+foldernum=good_data(1);
 load(fullfile(processed_path,datafolders{foldernum},['/mat_outfiles/data_' datafolders{foldernum} '.mat']))
 eval(['tempdata=data_' datafolders{foldernum} ';'])
 load(fullfile(processed_path,datafolders{foldernum},['/mat_outfiles/K_PAR_' datafolders{foldernum}]));
@@ -29,6 +29,7 @@ matsource=fullfile(processed_path,datafolders{foldernum},'/mat_outfiles/');
 %% plot station points:
 figure(7), clf
 figure(6), clf, hold on
+plotflag1wv=1;
 
 plot(-70.567,41.325,'o','markersize',16,'color',[0.5 0.5 0.5]) %tower
 plot(-70.555,41.335,'o','markersize',16,'color',[0.5 0.5 0.5]) %node
@@ -58,17 +59,17 @@ for filenum=1:length(K_PAR);
         impr=K_PAR(filenum).depth_index; %index that matches to downcast and used to do PAR regression
         ipar=K_PAR(filenum).par_index; %index that matches to downcast and used to do PAR regression
         
-        %[~, i400]=min(abs(wavelen_downwell-400)); %indexes of closest wv to 400
-        [~, i720]=min(abs(wavelen_downwell-720)); %indexes of closest wv to 700
+        [~, i720]=min(abs(wavelen_downwell-720)); %indexes of closest wv to 720
         
         % calculate k for each wavelength and record:
         k_wv=nan(i720,4);
         for wv=1:i720 %don't go beyond this as water absorbs very quickly...
             
-            if any(adj_edl(ipar,wv) < 0)
+            if any(adj_edl(ipar,wv) < 0) %hmm..is this the right logic here? 
+                keyboard
                 k_wv(wv,:)=[wavelen_downwell(wv) NaN NaN NaN];
             else
-                [k,~,~,~,stats] = regress(log(adj_edl(ipar,wv)),[ones(size(depth(impr))) depth(impr)]);
+                [k,~,~,~,stats] = regress(log(adj_edl(ipar,wv)),[ones(size(depth(impr))) depth(impr)]); %regression between energy at wavlength and depth
                 
                  % k_wv(wv,:)=[wavelen_downwell(wv) k(1) k(2) stats(1)];
                 if stats(1) < 0.70
@@ -95,7 +96,7 @@ for filenum=1:length(K_PAR);
         k_lambda(filenum).par_index=ipar;
         
         figure(7), hold on
-        plot(k_wv(:,1),-k_wv(:,3),'.')
+        plot(k_wv(:,1),-k_wv(:,3),'.') %wavelength  and slope of regression fit
         
         figure(6), hold on
         plot(location(filenum).lon,location(filenum).lat,'p','markersize',10)
@@ -158,11 +159,12 @@ for filenum=1:length(K_PAR);
         plot(location(filenum).lon,location(filenum).lat,'p','markersize',10)
      end
     
-    pause 
+    %pause
+    keyboard
     
 end
 
-%save the attenuation fits:
+%% save the attenuation fits:
 eval(['k_lambda_' datafolders{foldernum} '=k_lambda;'])
 eval(['save ' matsource 'k_lambda_' datafolders{foldernum} '.mat k_lambda_' datafolders{foldernum}])
 clear k_lambda tempdata K_PAR mprtime edl_ind edl_PAR depth impr* ipar*
